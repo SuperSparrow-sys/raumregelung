@@ -1,0 +1,22 @@
+# Datenbank
+*.db
+*.db-shm
+*.db-wal
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtuelle Umgebung
+.venv/
+venv/
+env/
+
+# Logs
+*.csv
+*.log
+
+# Betriebssystem
+.DS_Store
+Thumbs.db

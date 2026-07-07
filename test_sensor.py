@@ -1,7 +1,7 @@
 import time
 from hardware.temperatur_sensor import TemperaturSensor
 
-PORT = "COM3"
+PORT = "/dev/ttyUSB0"
 ADRESSE = 1
 BAUDRATE = 38400
 PARITY = "N"
