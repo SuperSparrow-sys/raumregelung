@@ -24,7 +24,7 @@ def crc16_modbus(data: bytes) -> bytes:
 
 
 # ── Konfiguration ─────────────────────────────────────────────────────────────
-PORT     = '/dev/serial0'   # ggf. auf /dev/ttyAMA10 ändern
+PORT     = '/dev/ttySC0'
 BAUDRATE = 38400
 
 ser = serial.Serial(

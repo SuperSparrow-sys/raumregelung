@@ -2,7 +2,7 @@ import time
 from hardware.temperatur_sensor import TemperaturSensor
 from hardware.ventil import KaelteVentil
 
-PORTS = ["/dev/serial0", "/dev/ttyAMA10"]
+PORTS = ["/dev/ttySC0"]
 BAUDRATE = 38400
 PARITY = "N"
 STOPBITS = 2

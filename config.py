@@ -6,7 +6,7 @@ Diese Werte an die eigene Anlage anpassen.
 # ---- Serielle Schnittstelle für den RS-485 Modbus-RTU Bus ----
 # WICHTIG: Auf Windows "COM3" (oder passenden COM-Port) eintragen!
 #          Auf Linux   "/dev/ttyUSB0" (oder passendes ttyUSB-Gerät)
-SERIELLER_PORT = "/dev/ttyUSB0"
+SERIELLER_PORT = "/dev/ttySC0"
 
 # ---- Modbus-Kommunikationsparameter ----
 # Müssen bei ALLEN Geräten am Bus identisch eingestellt sein
