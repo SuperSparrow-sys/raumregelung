@@ -1,9 +1,6 @@
 """
-Standalone Modbus-RTU Test – Slave 5, Register 4 / 5 / 6
+Standalone Modbus-RTU Test – Sensoren Adr 1-4 (Reg 0) + Ventil Adr 5 (Reg 4-6)
 Keine Projektimporte – nur 'pyserial' wird benötigt.
-
-Befehlsaufbau (FC 03, 3 Register ab Adresse 4):
-    05 03 00 04 00 03 <CRC-Lo> <CRC-Hi>
 """
 
 import serial
@@ -23,6 +20,15 @@ def crc16_modbus(data: bytes) -> bytes:
     return bytes([crc & 0xFF, (crc >> 8) & 0xFF])
 
 
+def sende_befehl(ser: serial.Serial, nutzdaten: bytes) -> bytes:
+    """Sendet einen Modbus-Befehl (mit CRC) und gibt die Rohantwort zurück."""
+    befehl = nutzdaten + crc16_modbus(nutzdaten)
+    ser.reset_input_buffer()
+    ser.write(befehl)
+    time.sleep(0.2)
+    return ser.read(100)
+
+
 # ── Konfiguration ─────────────────────────────────────────────────────────────
 PORT     = '/dev/ttySC0'
 BAUDRATE = 38400
@@ -36,36 +42,39 @@ ser = serial.Serial(
     timeout=2
 )
 
-# ── Befehl aufbauen ───────────────────────────────────────────────────────────
-# Slave 5 | FC 03 | Start-Register 4 | Anzahl 3 Register
-nutzdaten = bytes([0x05, 0x03, 0x00, 0x04, 0x00, 0x03])
-befehl    = nutzdaten + crc16_modbus(nutzdaten)
+print(f"Port: {PORT}  |  {BAUDRATE}-8N2")
+print("=" * 50)
 
-print(f"Port  : {PORT}  |  {BAUDRATE}-8N2")
-print(f"Befehl: {befehl.hex(' ').upper()}")
-print("Sende Anfrage an Slave 5 ...")
-
-ser.write(befehl)
-time.sleep(0.2)
-
-antwort = ser.read(100)
-ser.close()
-
-# ── Auswertung ────────────────────────────────────────────────────────────────
-if not antwort:
-    print("\nFEHLER: Timeout – Slave 5 antwortet nicht.")
-else:
-    print(f"\nANTWORT ({len(antwort)} Bytes): {antwort.hex(' ').upper()}")
-
-    # Erwartete Antwort bei 3 Registern:
-    # Addr(1) + FC(1) + ByteCount(1) + 6 Datenbytes + CRC(2) = 11 Bytes
-    if len(antwort) >= 11:
-        reg4 = int.from_bytes(antwort[3:5], byteorder='big')
-        reg5 = int.from_bytes(antwort[5:7], byteorder='big')
-        reg6 = int.from_bytes(antwort[7:9], byteorder='big')
-
-        print(f"\nRegister 4 (Rel. Position): {reg4:5d}  ->  {reg4 / 100:.1f} %")
-        print(f"Register 5               : {reg5:5d}")
-        print(f"Register 6               : {reg6:5d}")
+# ── Temperatursensoren Adr 1-4, Register 0 (Temperatur, Faktor 0.1, signed) ──
+for adresse in [1, 2, 3, 4]:
+    nutzdaten = bytes([adresse, 0x03, 0x00, 0x00, 0x00, 0x01])
+    antwort = sende_befehl(ser, nutzdaten)
+    print(f"Sensor Adr {adresse}:", end="  ")
+    if not antwort:
+        print("TIMEOUT – keine Antwort")
+    elif len(antwort) >= 7:
+        rohwert = int.from_bytes(antwort[3:5], byteorder='big', signed=True)
+        print(f"{antwort.hex(' ').upper()}  ->  Temperatur: {rohwert / 10:.1f} °C")
     else:
-        print(f"Warnung: Antwort zu kurz ({len(antwort)} Bytes, erwartet >= 11).")
+        print(f"Antwort zu kurz ({len(antwort)} Bytes): {antwort.hex(' ').upper()}")
+
+print("=" * 50)
+
+# ── Ventil Adr 5, Register 4-6 ────────────────────────────────────────────────
+nutzdaten = bytes([0x05, 0x03, 0x00, 0x04, 0x00, 0x03])
+antwort = sende_befehl(ser, nutzdaten)
+print("Ventil Adr 5 :", end="  ")
+if not antwort:
+    print("TIMEOUT – keine Antwort")
+elif len(antwort) >= 11:
+    reg4 = int.from_bytes(antwort[3:5], byteorder='big')
+    reg5 = int.from_bytes(antwort[5:7], byteorder='big')
+    reg6 = int.from_bytes(antwort[7:9], byteorder='big')
+    print(antwort.hex(' ').upper())
+    print(f"  Reg 4 (Rel. Position): {reg4:5d}  ->  {reg4 / 100:.1f} %")
+    print(f"  Reg 5               : {reg5:5d}")
+    print(f"  Reg 6               : {reg6:5d}")
+else:
+    print(f"Antwort zu kurz ({len(antwort)} Bytes): {antwort.hex(' ').upper()}")
+
+ser.close()

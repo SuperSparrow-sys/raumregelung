@@ -19,7 +19,7 @@ STOPBITS = 2         # 2 bei Paritaet "N" (Werkseinstellung), sonst 1
 TEMPERATUR_SENSOR_ADRESSEN = [1, 2, 3, 4]
 
 # ---- Modbus-Slave-Adresse des Kälte-Ventilantriebs (SR24A-MOD) ----
-VENTIL_ADRESSE = 10
+VENTIL_ADRESSE = 5
 
 # ---- Sollwert Raumtemperatur [°C] ----
 SOLLWERT_TEMPERATUR = 22.0
