@@ -1,0 +1,8 @@
+{
+  "sollwert": 22.0,
+  "max_temp": 30.0,
+  "Kp": 35.0,
+  "Ki": 12.0,
+  "Kd": 0.0,
+  "zykluszeit_sek": 60.0
+}

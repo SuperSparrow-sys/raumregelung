@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eisenwerk — Diagramme</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/stil.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+</head>
+<body>
+<div class="nav">
+  <a href="/uebersicht" class="btn">Übersicht</a>
+  <a href="/diagramme" class="btn btn-primary">Diagramme</a>
+  <a href="/alarme" class="btn btn-alarm">Alarme<span id="alarmBadge">0</span></a>
+</div>
+
+<div class="chart-page">
+  <div class="chart-toolbar">
+    <div class="zeitraum-leiste">
+      <span class="zeitraum-label">Zeitraum</span>
+      <button class="zeitraum-btn aktiv" data-std="24">24 h</button>
+      <button class="zeitraum-btn" data-std="72">3 d</button>
+      <button class="zeitraum-btn" data-std="168">7 d</button>
+      <button class="zeitraum-btn" data-std="720">30 d</button>
+      <span style="width:12px"></span>
+      <input type="datetime-local" class="zeit-input" id="zeitVon">
+      <span style="font-size:0.8rem;color:var(--secondary-text)">–</span>
+      <input type="datetime-local" class="zeit-input" id="zeitBis">
+      <button class="btn-laden" id="btnLaden">Laden</button>
+      <button class="btn" id="btnKanalToggle" style="margin-left:auto">▾ Kanäle ausblenden</button>
+    </div>
+    <div class="kanal-panel" id="kanalPanel">
+      <div id="kanalGruppen" style="display:flex;flex-wrap:wrap;gap:14px;width:100%;"></div>
+    </div>
+  </div>
+  <div class="chart-wrapper">
+    <canvas id="hauptChartCanvas"></canvas>
+  </div>
+  <div class="chart-info" id="chartInfo">Kanäle auswählen und Laden klicken.</div>
+</div>
+<script src="/static/diagramme.js"></script>
+</body>
+</html>

@@ -1,0 +1,244 @@
+:root {
+    --primary-bg: #ffffff;
+    --secondary-bg: #f6f7f9;
+    --accent: #111827;
+    --accent-light: #374151;
+    --primary-text: #111827;
+    --secondary-text: #6b7280;
+    --border-color: #e5e7eb;
+    --border-strong: #d1d5db;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --shadow: 0 1px 2px rgba(17,24,39,0.04), 0 4px 12px rgba(17,24,39,0.06);
+    --shadow-lg: 0 4px 6px rgba(17,24,39,0.05), 0 10px 24px rgba(17,24,39,0.10);
+    --green: #16a34a;
+    --red: #dc2626;
+    --orange: #d97706;
+    --blue: #2563eb;
+    --hot: #ef4444;
+    --cold: #3b82f6;
+    --valve-bg: #eef2ff;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body {
+    height:100%; overflow:hidden;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--secondary-bg); color: var(--primary-text); font-size: 14px;
+}
+body { display:flex; flex-direction:column; }
+body.no-scroll { overflow:hidden; }
+
+.nav {
+    display:flex; align-items:center; gap:8px; padding:10px 24px;
+    background:var(--primary-bg); border-bottom:1px solid var(--border-color);
+    flex-shrink:0; z-index:10;
+}
+.nav-right { margin-left:auto; display:flex; gap:8px; align-items:center; }
+
+.btn {
+    display:inline-flex; align-items:center; gap:6px;
+    padding:6px 16px; border-radius:8px; font-size:0.82rem; font-weight:600;
+    border:1px solid var(--border-strong); background:var(--primary-bg); color:var(--primary-text);
+    cursor:pointer; text-decoration:none; transition:all 0.15s;
+}
+.btn:hover { background:var(--secondary-bg); border-color:var(--accent); }
+.btn-primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+.btn-primary:hover { background:var(--accent-light); }
+.btn-danger { background:var(--red); color:#fff; border-color:var(--red); }
+.btn-danger:hover { opacity:0.85; }
+.btn-sm { padding:4px 10px; font-size:0.75rem; border-radius:6px; }
+
+/* ── Visu ─────────────────────────── */
+.visu-container {
+    flex:1; display:flex; align-items:center; justify-content:center;
+    padding:16px 24px; min-height:0;
+}
+.visu-rechteck {
+    position:relative;
+    background:var(--primary-bg);
+    border:2px solid var(--border-color);
+    border-radius:20px;
+    width:100%; max-width:1100px;
+    aspect-ratio:16/9;
+    max-height:calc(100vh - 100px);
+    box-shadow:var(--shadow-lg);
+}
+
+/* Sensor-Box */
+.sensor-box {
+    position:absolute;
+    background:var(--primary-bg);
+    border:2px solid var(--border-color);
+    border-radius:14px;
+    padding:10px 14px;
+    text-align:center;
+    min-width:110px;
+    cursor:pointer;
+    transition:all 0.2s;
+}
+.sensor-box:hover {
+    border-color:var(--blue);
+    box-shadow:0 0 0 2px rgba(37,99,235,0.15);
+    transform:scale(1.05);
+}
+.sensor-box .sensor-nr {
+    font-size:0.6rem; font-weight:700; color:var(--secondary-text);
+    text-transform:uppercase; letter-spacing:0.05em;
+    display:block; margin-bottom:4px;
+}
+.sensor-box .sensor-wert {
+    font-size:1.6rem; font-weight:800; display:block; line-height:1.2;
+}
+.sensor-box .sensor-einheit {
+    font-size:0.7rem; color:var(--secondary-text); display:block; margin-top:1px;
+}
+/* Verbindungslinien */
+.visu-linien {
+    position:absolute; inset:0; pointer-events:none;
+    width:100%; height:100%;
+}
+
+/* Zahnrad-Ecke (Einstellungen) */
+.zahnrad-ecke {
+    position:absolute; top:10px; right:10px; z-index:10;
+    width:30px; height:30px; border-radius:6px;
+    border:1px solid var(--border-color); background:var(--secondary-bg);
+    color:var(--secondary-text); font-size:16px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition:all 0.15s; text-decoration:none;
+}
+.zahnrad-ecke:hover { background:var(--primary-bg); color:var(--accent); border-color:var(--accent); }
+
+/* Ventilantrieb (Mitte) */
+.ventil-box {
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:130px; height:100px; border-radius:14px;
+    background:var(--valve-bg); border:2px solid var(--blue);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    z-index:5; box-shadow:0 2px 8px rgba(37,99,235,0.12);
+}
+.ventil-label {
+    font-size:0.65rem; font-weight:700; color:var(--blue);
+    text-transform:uppercase; letter-spacing:0.04em;
+    margin-bottom:6px;
+}
+.ventil-row { display:flex; gap:14px; align-items:center; }
+.ventil-item { text-align:center; }
+.ventil-item .venti-sub { font-size:0.55rem; color:var(--secondary-text); font-weight:600; text-transform:uppercase; }
+.ventil-item .ventil-val { font-size:1.2rem; font-weight:800; color:var(--primary-text); }
+.ventil-item .ventil-unit { font-size:0.65rem; color:var(--secondary-text); }
+
+/* Fußzeile */
+.visu-footer {
+    position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+    display:flex; gap:20px; font-size:0.75rem; color:var(--secondary-text);
+    background:var(--primary-bg); padding:4px 16px; border-radius:10px;
+    border:1px solid var(--border-color);
+}
+
+/* Alarm Badge */
+#alarmBadge {
+    display:none; position:absolute; top:-6px; right:-6px;
+    background:var(--red); color:#fff; border-radius:50%;
+    width:18px; height:18px; font-size:0.65rem; font-weight:800;
+    align-items:center; justify-content:center;
+}
+.btn-alarm { position:relative; }
+
+/* Modal */
+.modal-backdrop {
+    display:none; position:fixed; inset:0; background:rgba(17,24,39,0.45);
+    z-index:1000; align-items:center; justify-content:center;
+    backdrop-filter:blur(2px);
+}
+.modal-backdrop.show { display:flex; }
+.modal {
+    background:var(--primary-bg); border:1px solid var(--border-color);
+    border-radius:16px; max-width:800px; width:90vw; max-height:85vh;
+    display:flex; flex-direction:column; box-shadow:var(--shadow-lg);
+    animation:modal-in 0.2s ease;
+}
+@keyframes modal-in { from{opacity:0;transform:translateY(20px)scale(0.97)}to{opacity:1;transform:translateY(0)scale(1)} }
+.modal-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 20px; border-bottom:1px solid var(--border-color); flex-shrink:0;
+}
+.modal-header h2 { font-size:1.05rem; font-weight:700; }
+.modal-close {
+    width:28px; height:28px; border-radius:50%; border:none;
+    background:var(--secondary-bg); color:var(--secondary-text); font-size:1.2rem; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; transition:all 0.15s;
+}
+.modal-close:hover { background:var(--red); color:#fff; }
+.modal-body { padding:16px 20px; overflow-y:auto; flex:1; }
+
+/* PID Grid */
+.pid-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; }
+.pid-item { display:flex; flex-direction:column; gap:4px; }
+.pid-item label { font-size:0.78rem; font-weight:600; color:var(--secondary-text); }
+.pid-item input, .settings-input {
+    padding:8px 10px; border:1px solid var(--border-color); border-radius:8px;
+    background:var(--secondary-bg); color:var(--primary-text); font-size:0.9rem; font-weight:600;
+    font-family:inherit; outline:none; transition:border-color 0.15s;
+}
+.pid-item input:focus, .settings-input:focus { border-color:var(--accent); }
+.input-hint { font-size:0.7rem; color:var(--secondary-text); }
+.control-label { font-size:0.82rem; font-weight:700; color:var(--secondary-text); text-transform:uppercase; letter-spacing:0.04em; }
+
+/* Sensor-Modal (Chart) */
+.sensor-modal-body { padding:0; }
+.sensor-detail-info {
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+    gap:8px; padding:0 20px 12px;
+}
+.sensor-detail-info > div {
+    text-align:center; padding:6px; background:var(--secondary-bg); border-radius:8px;
+    border:1px solid var(--border-color);
+}
+.sensor-detail-info .label { font-size:0.65rem; color:var(--secondary-text); display:block; }
+.sensor-detail-info .value { font-size:1.1rem; font-weight:700; display:block; }
+.chart-container { position:relative; height:350px; padding:16px; }
+
+/* Zeitraum-Buttons */
+.zeitraum-btn {
+    padding:5px 14px; border:1px solid var(--border-color); border-radius:20px;
+    background:var(--primary-bg); color:var(--secondary-text); font-size:0.78rem; font-weight:600;
+    cursor:pointer; transition:all 0.15s;
+}
+.zeitraum-btn:hover { background:var(--secondary-bg); }
+.zeitraum-btn.aktiv { background:var(--accent); color:#fff; border-color:var(--accent); }
+
+/* Diagramm-Seite */
+.chart-page { flex:1; display:flex; flex-direction:column; padding:14px 24px 10px; overflow:hidden; gap:10px; }
+.chart-toolbar { display:flex; flex-direction:column; gap:10px; flex-shrink:0; }
+.zeitraum-leiste { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.zeitraum-label { font-size:0.82rem; font-weight:600; color:var(--secondary-text); text-transform:uppercase; letter-spacing:0.04em; margin-right:4px; }
+.zeit-input { padding:4px 10px; border:1px solid var(--border-color); border-radius:8px; background:var(--primary-bg); color:var(--primary-text); font-size:0.8rem; font-family:inherit; }
+.btn-laden { padding:5px 16px; border:1px solid var(--accent); border-radius:20px; background:var(--accent); color:#fff; font-size:0.78rem; font-weight:600; cursor:pointer; }
+.btn-laden:hover { opacity:0.85; }
+
+.kanal-panel {
+    background:var(--primary-bg); border:1px solid var(--border-color); border-radius:10px;
+    padding:12px 16px; display:flex; flex-wrap:wrap; gap:14px; transition:all 0.2s; overflow:hidden;
+}
+.kanal-panel.collapsed { max-height:0; padding:0 16px; border-color:transparent; }
+.kanal-gruppe { min-width:200px; flex:1; }
+.kanal-gruppe-titel { font-size:0.75rem; font-weight:700; color:var(--secondary-text); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px; padding-bottom:4px; border-bottom:1px solid var(--border-color); }
+.kanal-checkboxen { display:flex; flex-direction:column; gap:3px; }
+.kanal-label { font-size:0.78rem; color:var(--primary-text); cursor:pointer; display:flex; align-items:center; gap:5px; padding:2px 0; }
+.kanal-label:hover { color:var(--accent); }
+.kanal-cb { accent-color:var(--accent); cursor:pointer; }
+.chart-wrapper { flex:1; min-height:0; position:relative; background:var(--primary-bg); border:1px solid var(--border-color); border-radius:12px; padding:12px 14px 8px; }
+.chart-info { font-size:0.78rem; color:var(--secondary-text); text-align:right; padding-top:2px; }
+
+/* Responsive */
+@media (max-width:768px) {
+    .nav { padding:8px 12px; flex-wrap:wrap; gap:6px; }
+    .visu-container { padding:8px 12px; }
+    .modal { width:95vw; }
+    .pid-grid { grid-template-columns:1fr; }
+    .visu-rechteck { aspect-ratio:auto; min-height:500px; padding:16px; }
+    .sensor-box { min-width:80px; padding:6px 10px; }
+    .sensor-box .sensor-wert { font-size:1.2rem; }
+    .ventil-box { width:100px; height:80px; }
+}

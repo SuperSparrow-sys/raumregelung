@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eisenwerk — Alarme</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/stil.css">
+<style>
+html, body { height:100%; overflow:auto; }
+.alarm-page { padding:16px 24px; }
+.alarm-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px; }
+.alarm-header h2 { font-size:1.1rem; font-weight:700; }
+.alarm-filter { display:flex; gap:8px; flex-wrap:wrap; }
+.alarm-filter .btn.aktiv { background:var(--accent); color:#fff; border-color:var(--accent); }
+.alarm-table-wrap { background:var(--primary-bg); border:1px solid var(--border-color); border-radius:12px; overflow:hidden; }
+.alarm-table { width:100%; border-collapse:collapse; }
+.alarm-table th { text-align:left; padding:10px 14px; font-size:0.72rem; font-weight:700; color:var(--secondary-text); text-transform:uppercase; letter-spacing:0.04em; border-bottom:1px solid var(--border-color); background:var(--secondary-bg); }
+.alarm-table td { padding:8px 14px; font-size:0.82rem; border-bottom:1px solid var(--border-color); vertical-align:middle; }
+.alarm-table tr:last-child td { border-bottom:none; }
+.alarm-table tr:hover { background:rgba(37,99,235,0.04); }
+.typ-badge { display:inline-block; padding:2px 10px; border-radius:12px; font-size:0.7rem; font-weight:700; }
+.typ-Fehler { background:#fef2f2; color:var(--red); }
+.typ-Warnung { background:#fffbeb; color:var(--orange); }
+.typ-Info { background:#eff6ff; color:var(--blue); }
+.status-badge { display:inline-block; padding:2px 10px; border-radius:12px; font-size:0.7rem; font-weight:700; }
+.status-offen { background:#fef2f2; color:var(--red); }
+.status-bestaetigt { background:#f0fdf4; color:var(--green); }
+.btn-quitt { padding:4px 12px; border-radius:6px; border:1px solid var(--border-color); background:var(--primary-bg); color:var(--primary-text); font-size:0.72rem; cursor:pointer; font-family:inherit; transition:all 0.15s; }
+.btn-quitt:hover { border-color:var(--accent); background:var(--accent); color:#fff; }
+.leer { text-align:center; padding:40px 20px; color:var(--secondary-text); font-size:0.9rem; }
+</style>
+</head>
+<body>
+<div class="nav">
+  <a href="/uebersicht" class="btn">Übersicht</a>
+  <a href="/diagramme" class="btn">Diagramme</a>
+  <a href="/alarme" class="btn btn-primary btn-alarm">Alarme<span id="alarmBadge">0</span></a>
+</div>
+
+<div class="alarm-page">
+    <div class="alarm-header">
+      <h2>Alarmübersicht</h2>
+      <div class="alarm-filter">
+        <button class="btn aktiv" data-filter="aktiv">Aktiv</button>
+        <button class="btn" data-filter="historie">Historie</button>
+        <button class="btn" data-filter="Fehler">Fehler</button>
+        <button class="btn" data-filter="Warnung">Warnung</button>
+      </div>
+    </div>
+  <div class="alarm-table-wrap">
+    <table class="alarm-table">
+      <thead><tr>
+        <th>Zeit</th><th>Typ</th><th>Meldung</th><th>Sensor</th><th>Wert</th><th>Grenze</th><th>Status</th><th></th>
+      </tr></thead>
+      <tbody id="alarmBody">
+        <tr><td colspan="8" class="leer">Keine Alarme vorhanden.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div style="text-align:right;margin-top:8px;font-size:0.72rem;color:var(--secondary-text);">
+    Aktualisiert: <span id="alarmUpdateZeit">--</span>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+var filterAktiv = 'aktiv';
+var alarmeCache = [];
+function fmtDT(d) {
+  var p=function(n){return String(n).padStart(2,'0')};
+  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds());
+}
+function escapeHtml(t) {
+  var d=document.createElement('div'); d.appendChild(document.createTextNode(t||'')); return d.innerHTML;
+}
+function laden() {
+  var url='/api/alarme?aktiv='+(filterAktiv==='aktiv'?'1':'0');
+  if (filterAktiv==='Fehler'||filterAktiv==='Warnung') url='/api/alarme?aktiv=0';
+  fetch(url).then(function(r){return r.json();}).then(function(res){
+    alarmeCache=res.alarme||[];
+    var tbody=document.getElementById('alarmBody');
+    var badge=document.getElementById('alarmBadge');
+    var count=res.anzahl_aktiv||0;
+    if (badge) { badge.textContent=count; badge.style.display=count>0?'flex':'none'; }
+    if (filterAktiv==='Fehler'||filterAktiv==='Warnung') {
+      alarmeCache=alarmeCache.filter(function(a){return a.typ===filterAktiv;});
+    }
+    if (alarmeCache.length===0) {
+      tbody.innerHTML='<tr><td colspan="8" class="leer">Keine Alarme vorhanden.</td></tr>';
+      document.getElementById('alarmUpdateZeit').textContent=fmtDT(new Date());
+      return;
+    }
+    var html='';
+    alarmeCache.forEach(function(a){
+      var typKl='typ-'+a.typ;
+      var statusKl=a.bestaetigt?'status-bestaetigt':'status-offen';
+      var statusTxt=a.bestaetigt?'Bestätigt':'Offen';
+      var btn='';
+      if (!a.bestaetigt && filterAktiv==='aktiv') btn='<button class="btn-quitt" onclick="quittieren('+a.id+')">Quittieren</button>';
+      html+='<tr>'+
+        '<td style="white-space:nowrap;font-size:0.78rem;">'+escapeHtml(a.zeitstempel)+'</td>'+
+        '<td><span class="typ-badge '+typKl+'">'+escapeHtml(a.typ)+'</span></td>'+
+        '<td>'+escapeHtml(a.text)+'</td>'+
+        '<td>'+escapeHtml(a.sensor||'—')+'</td>'+
+        '<td>'+(a.wert!=null?a.wert.toFixed(1):'—')+'</td>'+
+        '<td>'+(a.grenze!=null?a.grenze.toFixed(1):'—')+'</td>'+
+        '<td><span class="status-badge '+statusKl+'">'+statusTxt+'</span></td>'+
+        '<td>'+btn+'</td>'+
+      '</tr>';
+    });
+    tbody.innerHTML=html;
+    document.getElementById('alarmUpdateZeit').textContent=fmtDT(new Date());
+  }).catch(function(){
+    document.getElementById('alarmBody').innerHTML='<tr><td colspan="8" class="leer" style="color:var(--red);">Fehler beim Laden.</td></tr>';
+  });
+}
+window.quittieren=function(id){
+  fetch('/api/alarme/quittieren',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})})
+    .then(function(r){return r.json();}).then(function(){laden();}).catch(function(){});
+};
+document.addEventListener('DOMContentLoaded',function(){
+  document.querySelectorAll('[data-filter]').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      document.querySelectorAll('[data-filter]').forEach(function(b){b.classList.remove('aktiv');});
+      this.classList.add('aktiv'); filterAktiv=this.dataset.filter; laden();
+    });
+  });
+  laden();
+  setInterval(laden,5000);
+});
+})();
+</script>
+</body>
+</html>

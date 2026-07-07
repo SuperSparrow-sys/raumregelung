@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eisenwerk — Übersicht</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/stil.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+</head>
+<body>
+
+<div class="nav">
+  <a href="/uebersicht" class="btn btn-primary">Übersicht</a>
+  <a href="/diagramme" class="btn">Diagramme</a>
+  <a href="/alarme" class="btn btn-alarm">Alarme<span id="alarmBadge">0</span></a>
+</div>
+
+<div class="visu-container">
+  <div class="visu-rechteck" id="visuRechteck">
+
+    <svg class="visu-linien" id="visuLines">
+      <line x1="0" y1="0" x2="0" y2="0" stroke="#d1d5db" stroke-width="2" stroke-dasharray="6,4"/>
+      <line x1="0" y1="0" x2="0" y2="0" stroke="#d1d5db" stroke-width="2" stroke-dasharray="6,4"/>
+      <line x1="0" y1="0" x2="0" y2="0" stroke="#d1d5db" stroke-width="2" stroke-dasharray="6,4"/>
+      <line x1="0" y1="0" x2="0" y2="0" stroke="#d1d5db" stroke-width="2" stroke-dasharray="6,4"/>
+    </svg>
+
+    <a class="zahnrad-ecke" id="zahnradEcke" href="#" title="PID-Einstellungen">&#9881;</a>
+
+    <div class="sensor-box" id="sensor1" style="top:8%;left:8%;">
+      <span class="sensor-nr">Sensor 1</span>
+      <span class="sensor-wert" id="valSensor1">--</span>
+      <span class="sensor-einheit">°C</span>
+    </div>
+
+    <div class="sensor-box" id="sensor2" style="top:8%;right:8%;">
+      <span class="sensor-nr">Sensor 2</span>
+      <span class="sensor-wert" id="valSensor2">--</span>
+      <span class="sensor-einheit">°C</span>
+    </div>
+
+    <div class="sensor-box" id="sensor3" style="bottom:8%;left:8%;">
+      <span class="sensor-nr">Sensor 3</span>
+      <span class="sensor-wert" id="valSensor3">--</span>
+      <span class="sensor-einheit">°C</span>
+    </div>
+
+    <div class="sensor-box" id="sensor4" style="bottom:8%;right:8%;">
+      <span class="sensor-nr">Sensor 4</span>
+      <span class="sensor-wert" id="valSensor4">--</span>
+      <span class="sensor-einheit">°C</span>
+    </div>
+
+    <div class="ventil-box" id="ventilBox">
+      <div class="ventil-label">Ventilantrieb</div>
+      <div class="ventil-row">
+        <div class="ventil-item">
+          <span class="venti-sub">Ist</span>
+          <span class="ventil-val" id="valVentilIst">--</span>
+          <span class="ventil-unit">%</span>
+        </div>
+        <div class="ventil-item">
+          <span class="venti-sub">Soll</span>
+          <span class="ventil-val" id="valVentilSoll">--</span>
+          <span class="ventil-unit">%</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="visu-footer">
+      <span>Mittelwert: <strong id="valMittel">--</strong> °C</span>
+      <span>Sollwert: <strong id="valSoll">--</strong> °C</span>
+      <span>PID: <strong id="valPid">--</strong> %</span>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="pidBackdrop">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-header">
+      <h2>PID-Einstellungen</h2>
+      <button class="modal-close" id="pidClose">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="control-label" style="margin-bottom:12px;">Regler-Parameter</div>
+      <div class="pid-grid">
+        <div class="pid-item">
+          <label>P-Anteil (Kp)</label>
+          <input type="text" id="kpInput" inputmode="decimal" placeholder="0–50" autocomplete="off">
+          <span class="input-hint">0 – 100</span>
+        </div>
+        <div class="pid-item">
+          <label>I-Anteil <small>(Minuten)</small></label>
+          <input type="text" id="kiInput" inputmode="decimal" placeholder="0–60" autocomplete="off">
+          <span class="input-hint">0 – 60 (0 = aus)</span>
+        </div>
+        <div class="pid-item">
+          <label>D-Anteil <small>(Minuten)</small></label>
+          <input type="text" id="kdInput" inputmode="decimal" placeholder="0–60" autocomplete="off">
+          <span class="input-hint">0 – 60 (0 = aus)</span>
+        </div>
+      </div>
+      <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border-color);">
+        <div class="control-label" style="margin-bottom:12px;">Sollwerte</div>
+        <div class="pid-grid">
+          <div class="pid-item">
+            <label>Solltemperatur (°C)</label>
+            <input type="text" id="sollInput" inputmode="decimal" placeholder="5–40" autocomplete="off">
+            <span class="input-hint">5 – 40</span>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="btnSavePid" style="margin-top:16px;width:100%;">Speichern</button>
+      <span id="pidSaveStatus" style="display:block;text-align:center;margin-top:8px;font-size:0.85em;"></span>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="sensorBackdrop">
+  <div class="modal" style="max-width:700px;">
+    <div class="modal-header">
+      <h2 id="sensorModalTitel">Sensor-Verlauf</h2>
+      <button class="modal-close" id="sensorClose">&times;</button>
+    </div>
+    <div class="modal-body sensor-modal-body">
+      <div id="sensorDetailInfo" class="sensor-detail-info"></div>
+      <div class="chart-container">
+        <canvas id="sensorChartCanvas"></canvas>
+      </div>
+      <div style="display:flex;gap:8px;padding:0 16px 12px;flex-wrap:wrap;align-items:center;">
+        <label style="font-size:0.78rem;color:var(--secondary-text);">Zeitraum</label>
+        <button class="zeitraum-btn aktiv" data-sensor-std="24">24 h</button>
+        <button class="zeitraum-btn" data-sensor-std="72">3 d</button>
+        <button class="zeitraum-btn" data-sensor-std="168">7 d</button>
+        <button class="zeitraum-btn" data-sensor-std="720">30 d</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/uebersicht.js"></script>
+</body>
+</html>
