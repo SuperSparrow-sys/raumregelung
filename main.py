@@ -21,14 +21,25 @@ def _starte_webserver():
 def _versuche_hardware():
     try:
         import config as cfg
+        from hardware.modbus_rtu import erstelle_rs485_bus
         from hardware.temperatur_sensor import TemperaturSensor
         from hardware.ventil import KaelteVentil
+
+        # Einmalig den gemeinsamen RS-485-Bus öffnen (8E1, RTS-Richtungssteuerung)
+        bus = erstelle_rs485_bus(
+            port=cfg.SERIELLER_PORT,
+            baudrate=cfg.BAUDRATE,
+            parity=cfg.PARITAET,
+            stopbits=cfg.STOPBITS,
+        )
+
         sensoren = [
             TemperaturSensor(
                 port=cfg.SERIELLER_PORT, adresse=adr,
                 baudrate=cfg.BAUDRATE, parity=cfg.PARITAET,
                 stopbits=cfg.STOPBITS,
                 name=f"Temp-Sensor {i+1} (Adr {adr})",
+                shared_serial=bus,
             )
             for i, adr in enumerate(cfg.TEMPERATUR_SENSOR_ADRESSEN)
         ]
@@ -36,6 +47,7 @@ def _versuche_hardware():
             port=cfg.SERIELLER_PORT, adresse=cfg.VENTIL_ADRESSE,
             baudrate=cfg.BAUDRATE, parity=cfg.PARITAET,
             stopbits=cfg.STOPBITS, name="Kaelte-Ventil",
+            shared_serial=bus,
         )
         logger.info("Hardware initialisiert (%d Sensoren, Ventil Adr %d)", len(sensoren), cfg.VENTIL_ADRESSE)
         return sensoren, ventil
@@ -47,6 +59,7 @@ def _versuche_hardware():
 def lese_temperaturen(sensoren, alarmmgr, namen):
     if not sensoren:
         return [None, None, None, None]
+    from hardware.modbus_rtu import BUS_PAUSE_SEK
     werte = []
     for i, sensor in enumerate(sensoren):
         try:
@@ -57,6 +70,7 @@ def lese_temperaturen(sensoren, alarmmgr, namen):
             logger.error("Sensor %s nicht lesbar: %s", sensor.name, exc)
             werte.append(float("nan"))
             alarmmgr.verbindungs_abbruch(namen[i])
+        time.sleep(BUS_PAUSE_SEK)   # Bustelegramme trennen
     return werte
 
 
@@ -94,20 +108,14 @@ def main():
     from control.pid_regler import PIDRegler
     from data.datenlogger import DatenLogger
 
-    try:
-        import runtime_settings
-        rst = runtime_settings.laden()
-        sollwert = rst.get("sollwert", config.SOLLWERT_TEMPERATUR)
-        Kp = rst.get("Kp", config.PID_KP)
-        Ki = rst.get("Ki", config.PID_KI)
-        Kd = rst.get("Kd", config.PID_KD)
-    except Exception:
-        sollwert = config.SOLLWERT_TEMPERATUR
-        Kp = config.PID_KP
-        Ki = config.PID_KI
-        Kd = config.PID_KD
+    import runtime_settings
+    rst = runtime_settings.laden()   # Werte kommen ausschließlich aus runtime_settings.json
+    sollwert = rst["sollwert"]
+    Kp = rst["Kp"]
+    Ki = rst["Ki"]
+    Kd = rst["Kd"]
 
-    pid = PIDRegler(Kp=Kp, Ki=Ki, Kd=Kd)
+    pid = PIDRegler(Kp=Kp, Ki=Ki, Kd=Kd, kuehl_betrieb=True)  # Kälteventil: Ist > Soll → Ventil auf
     logger_datei = DatenLogger()
 
     logger.info("Regelung gestartet. Sollwert=%.1f°C, Kp=%.1f Ki=%.1f Kd=%.1f, Zyklus=%.0fs",
@@ -115,6 +123,8 @@ def main():
 
     _einstellungen_last = 0.0
     _sollwert = sollwert
+    _hand_modus = rst.get("hand_modus", False)
+    _hand_stellwert = rst.get("hand_stellwert", 0.0)
     sensor_namen = ["Sensor 1", "Sensor 2", "Sensor 3", "Sensor 4"]
 
     try:
@@ -122,15 +132,19 @@ def main():
             zyklus_start = time.monotonic()
             status = "OK"
 
+            # Betriebsart jeden Zyklus lesen (sofortige Reaktion auf Umschalten)
+            rst_akt = runtime_settings.laden()
+            _hand_modus = rst_akt.get("hand_modus", False)
+            _hand_stellwert = rst_akt.get("hand_stellwert", 0.0)
+
             jetzt = time.monotonic()
             if jetzt - _einstellungen_last >= 60:
                 try:
-                    rst = runtime_settings.laden()
-                    _sollwert = rst.get("sollwert", _sollwert)
+                    _sollwert = rst_akt.get("sollwert", _sollwert)
                     pid.setze_parameter(
-                        Kp=rst.get("Kp", Kp),
-                        Ki=rst.get("Ki", Ki),
-                        Kd=rst.get("Kd", Kd),
+                        Kp=rst_akt.get("Kp", pid.Kp),
+                        Ki=rst_akt.get("Ki", pid.Ki),
+                        Kd=rst_akt.get("Kd", pid.Kd),
                     )
                 except Exception:
                     pass
@@ -140,13 +154,24 @@ def main():
 
             mittelwert = gueltiger_mittelwert(temps)
 
-            if mittelwert is not None:
+            ausgabe = None
+            position = None
+
+            if _hand_modus:
+                # Hand-Betrieb: PID überbrückt, direkte Stellwertvorgabe
+                ausgabe = max(0.0, min(100.0, _hand_stellwert))
+                status = "HAND"
+            elif mittelwert is not None:
                 ausgabe = pid.berechne(
                     sollwert=_sollwert,
                     messwert=mittelwert,
                     dt=config.ZYKLUSZEIT_SEK,
                 )
-                position = None
+            else:
+                logger.warning("Keine Temperaturdaten – Regelung pausiert")
+                status = "KEINE_DATEN"
+
+            if ausgabe is not None:
                 if ventil is not None:
                     try:
                         ventil.setze_stellwert(ausgabe)
@@ -155,6 +180,7 @@ def main():
                         logger.error("Ventil nicht schreibbar: %s", exc)
                         alarmmgr.verbindungs_abbruch("Ventilantrieb")
                         status = "VENTIL_SCHREIBFEHLER"
+                    time.sleep(0.08)   # Antrieb Zeit geben, Paket zu verarbeiten
                     try:
                         position = ventil.lese_position()
                     except Exception as exc:
@@ -163,18 +189,20 @@ def main():
                         status = status if status != "OK" else "VENTIL_LESEFEHLER"
                 if position is None:
                     position = float("nan")
-                logger.info(
-                    "Temp=%.2f°C (Soll=%.1f°C) → PID=%.1f%% → Ventil=%.1f%% [%s]",
-                    mittelwert, _sollwert, ausgabe, position, status,
-                )
-            else:
-                ausgabe = None
-                position = None
-                logger.warning("Keine Temperaturdaten – Regelung pausiert")
+                if _hand_modus:
+                    logger.info(
+                        "HAND: Ventil-Soll=%.1f%% Ist=%.1f%% [%s]",
+                        ausgabe, position, status,
+                    )
+                else:
+                    logger.info(
+                        "Temp=%.2f°C (Soll=%.1f°C) → PID=%.1f%% → Ventil=%.1f%% [%s]",
+                        mittelwert, _sollwert, ausgabe, position, status,
+                    )
 
             logger_datei.schreibe_zeile(
                 temps=temps, mittelwert=mittelwert,
-                sollwert=_sollwert if mittelwert is not None else None,
+                sollwert=_sollwert if (mittelwert is not None or _hand_modus) else None,
                 ausgabe=ausgabe, ventil_position=position, status=status,
             )
 

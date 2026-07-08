@@ -2,6 +2,9 @@
 Gemeinsame Modbus-RTU Basisfunktionen für die serielle Kommunikation
 mit Belimo Sensoren und Aktoren (RS-485).
 
+Busarchitektur: Ein gemeinsamer serieller Port (RS-485, 8E1, RTS-Richtungssteuerung)
+wird von allen Geräten geteilt. Erzeugung via erstelle_rs485_bus().
+
 Benötigt die Bibliothek 'minimalmodbus':
     pip install minimalmodbus
 """
@@ -11,6 +14,7 @@ import time
 
 import minimalmodbus
 import serial
+from serial.rs485 import RS485Settings
 
 logger = logging.getLogger("modbus_rtu")
 
@@ -20,29 +24,67 @@ _PARITAET_MAP = {
     "O": serial.PARITY_ODD,
 }
 
+BUS_PAUSE_SEK = 0.05   # Mindestpause zwischen zwei Bustelegrammen
+
+
+def erstelle_rs485_bus(port: str, baudrate: int = 38400,
+                       parity: str = "E", stopbits: int = 1,
+                       timeout: float = 0.2) -> serial.Serial:
+    """Öffnet den RS-485-Bus einmalig und gibt das konfigurierte Serial-Objekt zurück.
+
+    Alle Modbus-Geräte am selben Bus teilen sich dieses Objekt (shared serial).
+    Die RTS-Richtungssteuerung wird über RS485Settings aktiviert.
+
+    Args:
+        port:     Serieller Port, z.B. "/dev/ttySC1" oder "COM3"
+        baudrate: Übertragungsrate (Belimo-Standard: 38400)
+        parity:   "E" für Even – Belimo-Standard (8E1)
+        stopbits: 1  – Belimo-Standard bei Even-Parität
+        timeout:  Antwort-Timeout in Sekunden
+    """
+    ser = serial.Serial(
+        port=port,
+        baudrate=baudrate,
+        bytesize=8,
+        parity=_PARITAET_MAP[parity],
+        stopbits=stopbits,
+        timeout=timeout,
+    )
+    # RTS-basierte Senderichtungssteuerung für den RS-485-Transceiver
+    ser.rs485_mode = RS485Settings(
+        rts_level_for_tx=True,
+        rts_level_for_rx=False,
+        delay_before_tx=0.0,
+        delay_before_rx=0.0,
+    )
+    logger.info("RS-485-Bus geöffnet: %s (%d Bd, 8%s%d)", port, baudrate, parity, stopbits)
+    return ser
+
 
 class ModbusRTUGeraet:
     """Basisklasse für ein Modbus-RTU Gerät (Sensor oder Aktor).
 
-    Jede Instanz öffnet die serielle Schnittstelle über 'minimalmodbus'.
-    Mehrere Geräte am selben Bus (gleicher Port) können unabhängig
-    voneinander instanziert werden, da minimalmodbus den Port bei Bedarf
-    für jede Transaktion neu öffnet/schließt.
+    Bevorzugt shared_serial verwenden (erstellt via erstelle_rs485_bus()),
+    damit alle Geräte denselben RS-485-Port teilen und der Port nicht bei
+    jeder Transaktion geöffnet/geschlossen wird.
     """
 
     def __init__(self, port: str, adresse: int, baudrate: int = 38400,
-                 parity: str = "N", stopbits: int = 2, bytesize: int = 8,
-                 timeout: float = 1.0, name: str = ""):
+                 parity: str = "E", stopbits: int = 1, bytesize: int = 8,
+                 timeout: float = 0.2, name: str = "",
+                 shared_serial: serial.Serial = None):
         """
         Args:
-            port: serielle Schnittstelle, z.B. "/dev/ttyUSB0" oder "COM3"
-            adresse: Modbus-Slave-Adresse (1...247)
-            baudrate: Übertragungsrate (Belimo Werkseinstellung: 38400)
-            parity: "N", "E" oder "O"
-            stopbits: 1 oder 2 (bei parity="N" Werkseinstellung: 2)
-            bytesize: Datenbits (immer 8)
-            timeout: Antwort-Timeout in Sekunden
-            name: Klartextname für Logausgaben
+            port:          Serieller Port (nur für Fallback ohne shared_serial)
+            adresse:       Modbus-Slave-Adresse (1...247)
+            baudrate:      Übertragungsrate
+            parity:        "N", "E" oder "O"
+            stopbits:      1 oder 2
+            bytesize:      Datenbits (immer 8)
+            timeout:       Antwort-Timeout in Sekunden
+            name:          Klartextname für Logausgaben
+            shared_serial: Gemeinsames Serial-Objekt vom RS-485-Bus.
+                           Wenn angegeben, wird der Port NICHT separat geöffnet.
         """
         self.name = name or f"Geraet@{adresse}"
         self.adresse = adresse
@@ -50,13 +92,20 @@ class ModbusRTUGeraet:
         self.instrument = minimalmodbus.Instrument(
             port, adresse, mode=minimalmodbus.MODE_RTU
         )
-        self.instrument.serial.baudrate = baudrate
-        self.instrument.serial.bytesize = bytesize
-        self.instrument.serial.parity = _PARITAET_MAP[parity]
-        self.instrument.serial.stopbits = stopbits
-        self.instrument.serial.timeout = timeout
         self.instrument.clear_buffers_before_each_transaction = True
-        self.instrument.close_port_after_each_call = True
+
+        if shared_serial is not None:
+            # Gemeinsamen Bus nutzen – Port bleibt dauerhaft offen
+            self.instrument.serial = shared_serial
+            self.instrument.close_port_after_each_call = False
+        else:
+            # Fallback: eigene Verbindung (Port wird je Transaktion geöffnet/geschlossen)
+            self.instrument.serial.baudrate = baudrate
+            self.instrument.serial.bytesize = bytesize
+            self.instrument.serial.parity = _PARITAET_MAP[parity]
+            self.instrument.serial.stopbits = stopbits
+            self.instrument.serial.timeout = timeout
+            self.instrument.close_port_after_each_call = True
 
     def lese_register(self, register: int, anzahl_dezimalstellen: int = 0,
                        signed: bool = False, versuche: int = 3):

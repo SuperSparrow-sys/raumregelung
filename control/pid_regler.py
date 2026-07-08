@@ -16,18 +16,24 @@ AUSGABE_MIN = 0.0     # Stellgroesse-Untergrenze (%)
 
 
 class PIDRegler:
-    """PID-Regler – Eingabe Ki/Kd in Minuten, Anti-Windup."""
+    """PID-Regler – Eingabe Ki/Kd in Minuten, Anti-Windup.
 
-    def __init__(self, Kp: float, Ki: float, Kd: float):
+    kuehl_betrieb=True:  Fehler = Ist − Soll  (Ventil öffnet wenn zu warm)
+    kuehl_betrieb=False: Fehler = Soll − Ist  (Ventil öffnet wenn zu kalt)
+    """
+
+    def __init__(self, Kp: float, Ki: float, Kd: float, kuehl_betrieb: bool = False):
         """
         Args:
-            Kp: Proportionalverstaerkung
-            Ki: I-Anteil in Minuten (0 = aus)
-            Kd: D-Anteil in Minuten (0 = aus)
+            Kp:            Proportionalverstaerkung
+            Ki:            I-Anteil in Minuten (0 = aus)
+            Kd:            D-Anteil in Minuten (0 = aus)
+            kuehl_betrieb: True für Kälteventil (Ist > Soll → mehr Kühlen)
         """
         self.Kp = Kp
         self.Ki = Ki   # Minuten
         self.Kd = Kd   # Minuten
+        self.kuehl_betrieb = kuehl_betrieb
 
         # Interne Zustandsvariablen
         self.integral = 0.0
@@ -59,7 +65,7 @@ class PIDRegler:
         Returns:
             Stellgroesse (nicht geclippt – Clipping macht der Aufrufer)
         """
-        fehler = sollwert - messwert
+        fehler = (messwert - sollwert) if self.kuehl_betrieb else (sollwert - messwert)
 
         # P
         P = self.Kp * fehler

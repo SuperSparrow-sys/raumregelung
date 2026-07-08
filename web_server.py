@@ -163,6 +163,8 @@ def api_daten():
         "Ki": einst.get("Ki"),
         "Kd": einst.get("Kd"),
         "zykluszeit_sek": einst.get("zykluszeit_sek"),
+        "hand_modus": einst.get("hand_modus", False),
+        "hand_stellwert": einst.get("hand_stellwert", 0.0),
         "alarm_count": alarm_count,
         "db_vorhanden": letzte is not None,
     }

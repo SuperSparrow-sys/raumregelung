@@ -56,8 +56,35 @@ function updateData() {
     document.getElementById('valMittel').textContent = d.mittelwert != null ? d.mittelwert.toFixed(1) : '--';
     document.getElementById('valSoll').textContent = d.sollwert != null ? d.sollwert.toFixed(1) : '--';
     document.getElementById('valPid').textContent = d.pid_ausgabe != null ? Math.round(d.pid_ausgabe) : '--';
+    var sollAnzeige = (d.hand_modus === true && d.hand_stellwert != null)
+      ? Math.round(d.hand_stellwert)
+      : (d.pid_ausgabe != null ? Math.round(d.pid_ausgabe) : '--');
     document.getElementById('valVentilIst').textContent = d.ventil_position != null ? Math.round(d.ventil_position) : '--';
-    document.getElementById('valVentilSoll').textContent = d.pid_ausgabe != null ? Math.round(d.pid_ausgabe) : '--';
+    document.getElementById('valVentilSoll').textContent = sollAnzeige;
+
+    // Hand-Modus UI aktualisieren
+    var handModus = d.hand_modus === true;
+    var modeBadge    = document.getElementById('modeBadge');
+    var handRow      = document.getElementById('handControlRow');
+    var handInput    = document.getElementById('handStellung');
+    var ventilLabel  = document.getElementById('ventilLabel');
+    if (modeBadge) {
+      if (handModus) {
+        modeBadge.textContent = 'HAND';
+        modeBadge.className = 'mode-badge mode-hand';
+        handRow.classList.add('aktiv');
+        document.getElementById('ventilBox').classList.add('hand-aktiv');
+        ventilLabel.textContent = 'Ventil \u2013 HAND';
+        if (!handInput.dataset.user) handInput.value = Math.round(d.hand_stellwert != null ? d.hand_stellwert : 0);
+      } else {
+        modeBadge.textContent = 'AUTO';
+        modeBadge.className = 'mode-badge mode-auto';
+        handRow.classList.remove('aktiv');
+        document.getElementById('ventilBox').classList.remove('hand-aktiv');
+        ventilLabel.textContent = 'Ventilantrieb';
+        handInput.dataset.user = '';
+      }
+    }
 
     var kpEl = document.getElementById('kpInput');
     var kiEl = document.getElementById('kiInput');
@@ -174,6 +201,31 @@ function openPidModal() {
   document.getElementById('pidBackdrop').classList.add('show');
 }
 
+function toggleHandModus() {
+  var badge = document.getElementById('modeBadge');
+  var istHand = badge.classList.contains('mode-hand');
+  fetch('/api/einstellungen', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({hand_modus: !istHand})
+  }).then(function(r){return r.json();}).then(function(res){
+    if (res.success) updateData();
+  }).catch(function(){});
+}
+
+function setzeHandStellung() {
+  var val = parseFloat(document.getElementById('handStellung').value);
+  if (isNaN(val) || val < 0 || val > 100) return;
+  document.getElementById('handStellung').dataset.user = '';
+  fetch('/api/einstellungen', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({hand_stellwert: Math.round(val)})
+  }).then(function(r){return r.json();}).then(function(res){
+    if (res.success) updateData();
+  }).catch(function(){});
+}
+
 function savePidSettings() {
   var data = {};
   var inputs = [
@@ -223,6 +275,12 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('sensorBackdrop').addEventListener('click',function(e){if(e.target===this)this.classList.remove('show');});
 
   document.getElementById('btnSavePid').addEventListener('click',savePidSettings);
+  document.getElementById('modeBadge').addEventListener('click', toggleHandModus);
+  document.getElementById('btnHandSet').addEventListener('click', setzeHandStellung);
+  document.getElementById('handStellung').addEventListener('input', function(){this.dataset.user='1';});
+  document.getElementById('handStellung').addEventListener('keydown', function(e){
+    if (e.key === 'Enter') setzeHandStellung();
+  });
 
   document.querySelectorAll('[data-sensor-std]').forEach(function(btn){
     btn.addEventListener('click',function(){

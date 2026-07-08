@@ -112,11 +112,55 @@ body.no-scroll { overflow:hidden; }
 /* Ventilantrieb (Mitte) */
 .ventil-box {
     position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-    width:130px; height:100px; border-radius:14px;
+    width:145px; border-radius:14px;
     background:var(--valve-bg); border:2px solid var(--blue);
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    display:flex; flex-direction:column; align-items:center;
+    padding:8px 10px 10px;
     z-index:5; box-shadow:0 2px 8px rgba(37,99,235,0.12);
+    transition:border-color 0.2s, background 0.2s;
 }
+.ventil-box.hand-aktiv {
+    background:#fff7ed; border-color:var(--orange);
+    box-shadow:0 2px 8px rgba(217,119,6,0.18);
+}
+
+/* Betriebsart-Badge */
+.ventil-mode-row {
+    margin-top:6px;
+}
+.mode-badge {
+    font-size:0.58rem; font-weight:800; letter-spacing:0.06em;
+    text-transform:uppercase; padding:2px 9px; border-radius:4px;
+    cursor:pointer; user-select:none; transition:all 0.15s;
+}
+.mode-auto {
+    background:#dcfce7; color:#16a34a; border:1px solid #16a34a;
+}
+.mode-auto:hover { background:#bbf7d0; }
+.mode-hand {
+    background:#fff7ed; color:var(--orange); border:1px solid var(--orange);
+}
+.mode-hand:hover { background:#fed7aa; }
+
+/* Hand-Stellwert-Eingabe */
+.hand-control-row {
+    display:none; align-items:center; gap:4px; margin-top:6px;
+}
+.hand-control-row.aktiv { display:flex; }
+.hand-stellwert-input {
+    width:52px; padding:3px 5px; border:1px solid var(--border-strong);
+    border-radius:5px; font-size:0.82rem; font-weight:700;
+    text-align:center; background:var(--primary-bg); font-family:inherit;
+    outline:none; transition:border-color 0.15s;
+}
+.hand-stellwert-input:focus { border-color:var(--orange); }
+.hand-unit { font-size:0.65rem; color:var(--secondary-text); }
+.btn-hand-set {
+    padding:3px 7px; font-size:0.65rem; border-radius:4px;
+    font-weight:700; background:var(--orange); color:#fff;
+    border:none; cursor:pointer; transition:opacity 0.15s;
+}
+.btn-hand-set:hover { opacity:0.82; }
 .ventil-label {
     font-size:0.65rem; font-weight:700; color:var(--blue);
     text-transform:uppercase; letter-spacing:0.04em;

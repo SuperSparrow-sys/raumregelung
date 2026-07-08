@@ -54,7 +54,7 @@
     </div>
 
     <div class="ventil-box" id="ventilBox">
-      <div class="ventil-label">Ventilantrieb</div>
+      <div class="ventil-label" id="ventilLabel">Ventilantrieb</div>
       <div class="ventil-row">
         <div class="ventil-item">
           <span class="venti-sub">Ist</span>
@@ -66,6 +66,15 @@
           <span class="ventil-val" id="valVentilSoll">--</span>
           <span class="ventil-unit">%</span>
         </div>
+      </div>
+      <div class="ventil-mode-row">
+        <span class="mode-badge mode-auto" id="modeBadge" title="Klicken zum Umschalten AUTO ↔ HAND">AUTO</span>
+      </div>
+      <div class="hand-control-row" id="handControlRow">
+        <input type="number" id="handStellung" class="hand-stellwert-input"
+               min="0" max="100" step="1" value="0" inputmode="decimal">
+        <span class="hand-unit">%</span>
+        <button class="btn-hand-set" id="btnHandSet">OK</button>
       </div>
     </div>
 

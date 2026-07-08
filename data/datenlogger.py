@@ -2,7 +2,7 @@ import os
 import sqlite3
 from datetime import datetime
 
-DB_PFAD = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gesamtdaten.db")
+DB_PFAD = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "gesamtdaten.db")
 
 def _init_db():
     with sqlite3.connect(DB_PFAD) as conn:

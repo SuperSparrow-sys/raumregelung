@@ -4,16 +4,18 @@ Diese Werte an die eigene Anlage anpassen.
 """
 
 # ---- Serielle Schnittstelle für den RS-485 Modbus-RTU Bus ----
-# WICHTIG: Auf Windows "COM3" (oder passenden COM-Port) eintragen!
-#          Auf Linux   "/dev/ttyUSB0" (oder passendes ttyUSB-Gerät)
-SERIELLER_PORT = "/dev/ttySC0"
+# WICHTIG: Den richtigen COM-Port eintragen!
+# Windows: Geräte-Manager -> Anschlüsse (COM & LPT) -> USB Serial Port
+#          Typisch: "COM3", "COM4", ...
+# Linux:   "/dev/ttyUSB0" oder "/dev/ttyACM0"
+SERIELLER_PORT = "/dev/ttySC1"   # Linux: z.B. "/dev/ttySC1" | Windows: z.B. "COM3"
 
 # ---- Modbus-Kommunikationsparameter ----
 # Müssen bei ALLEN Geräten am Bus identisch eingestellt sein
 # (bei den Sensoren per DIP-Schalter, beim Ventil per ZTH EU / PC-Tool).
 BAUDRATE = 38400
-PARITAET = "N"      # "N", "E" oder "O"
-STOPBITS = 2         # 2 bei Paritaet "N" (Werkseinstellung), sonst 1
+PARITAET = "E"      # "N", "E" oder "O"  – Belimo-Standard: Even (8E1)
+STOPBITS = 1         # 1 bei Paritaet "E" (Belimo-Standard)
 
 # ---- Modbus-Slave-Adressen der 4 Temperaturfühler (22DT-15..) ----
 TEMPERATUR_SENSOR_ADRESSEN = [1, 2, 3, 4]

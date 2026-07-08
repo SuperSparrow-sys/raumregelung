@@ -13,28 +13,32 @@ _DEFAULTS = {
     "Ki": 10.0,
     "Kd": 0.0,
     "zykluszeit_sek": 60.0,
+    "hand_modus": False,
+    "hand_stellwert": 0.0,
 }
 
 GRENZEN = {
-    "sollwert":       (5.0, 40.0),
-    "Kp":             (0.0, 100.0),
-    "Ki":             (0.0, 60.0),
-    "Kd":             (0.0, 60.0),
-    "zykluszeit_sek": (10.0, 600.0),
+    "sollwert":        (5.0, 40.0),
+    "Kp":              (0.0, 100.0),
+    "Ki":              (0.0, 60.0),
+    "Kd":              (0.0, 60.0),
+    "zykluszeit_sek":  (10.0, 600.0),
+    "hand_stellwert":  (0.0, 100.0),
 }
 
 
 def _laden():
+    result = dict(_DEFAULTS)
     try:
         if os.path.exists(_PFAD):
             with open(_PFAD, "r", encoding="utf-8") as f:
                 inhalt = f.read().strip()
             if inhalt:
                 daten = json.loads(inhalt)
-                {_DEFAULTS.update(daten)}
+                result.update(daten)   # JSON-Werte überschreiben Defaults
     except Exception:
         pass
-    return dict(_DEFAULTS)
+    return result
 
 
 def laden():
@@ -59,7 +63,10 @@ def speichern(updates: dict):
 
 def validiere_und_speichere(updates: dict):
     for key, wert in updates.items():
-        if key in GRENZEN:
+        if key == "hand_modus":
+            if not isinstance(wert, bool):
+                return False, "'hand_modus' muss true oder false sein", {}
+        elif key in GRENZEN:
             lo, hi = GRENZEN[key]
             try:
                 v = float(wert)
