@@ -40,6 +40,17 @@ class AlarmManager:
     def verbindung_wiederhergestellt(self, sensor_name):
         if sensor_name in self._zustand:
             del self._zustand[sensor_name]
+            # Offene Alarme für dieses Gerät automatisch schließen
+            try:
+                with sqlite3.connect(DB_PFAD) as conn:
+                    conn.execute(
+                        "UPDATE alarme SET bestaetigt=1, bestaetigt_um=? "
+                        "WHERE sensor=? AND bestaetigt=0",
+                        (datetime.now().isoformat(timespec="seconds"), sensor_name),
+                    )
+            except Exception as exc:
+                logger.error("Alarm auto-schließen fehlgeschlagen: %s", exc)
+            logger.info("%s: wieder erreichbar – Alarm geschlossen", sensor_name)
 
     def systemmeldung(self, text, typ="Warnung"):
         if self._zustand.get("_system") == text:

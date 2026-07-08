@@ -32,7 +32,7 @@ PID_KI = 10.0
 PID_KD = 0.0
 
 # ---- Regelzyklus / Speicherintervall [Sekunden] ----
-ZYKLUSZEIT_SEK = 60.0
+ZYKLUSZEIT_SEK = 3.0
 
 # ---- CSV-Logdatei ----
 LOG_DATEI = "regelung_log.csv"

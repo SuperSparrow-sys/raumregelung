@@ -66,8 +66,7 @@ def lese_temperaturen(sensoren, alarmmgr, namen):
             t = sensor.lese_temperatur()
             werte.append(t)
             alarmmgr.verbindung_wiederhergestellt(namen[i])
-        except Exception as exc:
-            logger.error("Sensor %s nicht lesbar: %s", sensor.name, exc)
+        except Exception:
             werte.append(float("nan"))
             alarmmgr.verbindungs_abbruch(namen[i])
         time.sleep(BUS_PAUSE_SEK)   # Bustelegramme trennen
@@ -77,8 +76,8 @@ def lese_temperaturen(sensoren, alarmmgr, namen):
 def gueltiger_mittelwert(werte):
     gueltige = [w for w in werte if w is not None and w == w]
     if not gueltige:
-        return None
-    return mean(gueltige)
+        return None, 0
+    return mean(gueltige), len(gueltige)
 
 
 def main():
@@ -126,6 +125,8 @@ def main():
     _hand_modus = rst.get("hand_modus", False)
     _hand_stellwert = rst.get("hand_stellwert", 0.0)
     sensor_namen = ["Sensor 1", "Sensor 2", "Sensor 3", "Sensor 4"]
+    _sensor_anzahl_last = len(sensor_namen)
+    _log_last = 0.0
 
     try:
         while True:
@@ -152,7 +153,7 @@ def main():
 
             temps = lese_temperaturen(sensoren, alarmmgr, sensor_namen)
 
-            mittelwert = gueltiger_mittelwert(temps)
+            mittelwert, sensor_anzahl = gueltiger_mittelwert(temps)
 
             ausgabe = None
             position = None
@@ -162,13 +163,24 @@ def main():
                 ausgabe = max(0.0, min(100.0, _hand_stellwert))
                 status = "HAND"
             elif mittelwert is not None:
+                if sensor_anzahl != _sensor_anzahl_last:
+                    if sensor_anzahl < len(sensor_namen):
+                        logger.warning(
+                            "Nur %d/%d Sensoren online – Mittelwert %.1f °C",
+                            sensor_anzahl, len(sensor_namen), mittelwert,
+                        )
+                    else:
+                        logger.info("Alle %d Sensoren wieder online", len(sensor_namen))
+                    _sensor_anzahl_last = sensor_anzahl
                 ausgabe = pid.berechne(
                     sollwert=_sollwert,
                     messwert=mittelwert,
                     dt=config.ZYKLUSZEIT_SEK,
                 )
             else:
-                logger.warning("Keine Temperaturdaten – Regelung pausiert")
+                if _sensor_anzahl_last != 0:
+                    logger.warning("Keine Temperaturdaten – Regelung pausiert")
+                    _sensor_anzahl_last = 0
                 status = "KEINE_DATEN"
 
             if ausgabe is not None:
@@ -189,22 +201,14 @@ def main():
                         status = status if status != "OK" else "VENTIL_LESEFEHLER"
                 if position is None:
                     position = float("nan")
-                if _hand_modus:
-                    logger.info(
-                        "HAND: Ventil-Soll=%.1f%% Ist=%.1f%% [%s]",
-                        ausgabe, position, status,
-                    )
-                else:
-                    logger.info(
-                        "Temp=%.2f°C (Soll=%.1f°C) → PID=%.1f%% → Ventil=%.1f%% [%s]",
-                        mittelwert, _sollwert, ausgabe, position, status,
-                    )
 
-            logger_datei.schreibe_zeile(
-                temps=temps, mittelwert=mittelwert,
-                sollwert=_sollwert if (mittelwert is not None or _hand_modus) else None,
-                ausgabe=ausgabe, ventil_position=position, status=status,
-            )
+            if time.monotonic() - _log_last >= 60.0:
+                logger_datei.schreibe_zeile(
+                    temps=temps, mittelwert=mittelwert,
+                    sollwert=_sollwert if (mittelwert is not None or _hand_modus) else None,
+                    ausgabe=ausgabe, ventil_position=position, status=status,
+                )
+                _log_last = time.monotonic()
 
             wartezeit = config.ZYKLUSZEIT_SEK - (time.monotonic() - zyklus_start)
             time.sleep(max(1.0, wartezeit))

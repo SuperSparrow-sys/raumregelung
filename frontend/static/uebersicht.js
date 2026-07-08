@@ -75,14 +75,13 @@ function updateData() {
         handRow.classList.add('aktiv');
         document.getElementById('ventilBox').classList.add('hand-aktiv');
         ventilLabel.textContent = 'Ventil \u2013 HAND';
-        if (!handInput.dataset.user) handInput.value = Math.round(d.hand_stellwert != null ? d.hand_stellwert : 0);
+        if (document.activeElement !== handInput) handInput.value = Math.round(d.hand_stellwert != null ? d.hand_stellwert : 0);
       } else {
         modeBadge.textContent = 'AUTO';
         modeBadge.className = 'mode-badge mode-auto';
         handRow.classList.remove('aktiv');
         document.getElementById('ventilBox').classList.remove('hand-aktiv');
         ventilLabel.textContent = 'Ventilantrieb';
-        handInput.dataset.user = '';
       }
     }
 
@@ -90,10 +89,10 @@ function updateData() {
     var kiEl = document.getElementById('kiInput');
     var kdEl = document.getElementById('kdInput');
     var sollEl = document.getElementById('sollInput');
-    if (kpEl && !kpEl.dataset.user) kpEl.value = d.Kp;
-    if (kiEl && !kiEl.dataset.user) kiEl.value = d.Ki;
-    if (kdEl && !kdEl.dataset.user) kdEl.value = d.Kd;
-    if (sollEl && !sollEl.dataset.user) sollEl.value = d.sollwert;
+    if (kpEl  && document.activeElement !== kpEl)  kpEl.value  = d.Kp;
+    if (kiEl  && document.activeElement !== kiEl)  kiEl.value  = d.Ki;
+    if (kdEl  && document.activeElement !== kdEl)  kdEl.value  = d.Kd;
+    if (sollEl && document.activeElement !== sollEl) sollEl.value = d.sollwert;
 
     var badge = document.getElementById('alarmBadge');
     if (badge) {
@@ -216,7 +215,6 @@ function toggleHandModus() {
 function setzeHandStellung() {
   var val = parseFloat(document.getElementById('handStellung').value);
   if (isNaN(val) || val < 0 || val > 100) return;
-  document.getElementById('handStellung').dataset.user = '';
   fetch('/api/einstellungen', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
@@ -239,7 +237,7 @@ function savePidSettings() {
     if (el) {
       var val = parseFloat(el.value);
       if (!isNaN(val)) {
-        el.dataset.user = '1';
+
         data[o.key] = val;
       }
     }
@@ -277,7 +275,6 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('btnSavePid').addEventListener('click',savePidSettings);
   document.getElementById('modeBadge').addEventListener('click', toggleHandModus);
   document.getElementById('btnHandSet').addEventListener('click', setzeHandStellung);
-  document.getElementById('handStellung').addEventListener('input', function(){this.dataset.user='1';});
   document.getElementById('handStellung').addEventListener('keydown', function(e){
     if (e.key === 'Enter') setzeHandStellung();
   });
