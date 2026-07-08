@@ -4,7 +4,7 @@ import threading
 from statistics import mean
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
 logger = logging.getLogger("main")
@@ -223,6 +223,8 @@ def main():
                     "pid_ausgabe_prozent": ausgabe,
                     "ventil_position_prozent": position,
                     "status": status,
+                    "hand_modus": _hand_modus,
+                    "hand_stellwert": _hand_stellwert,
                 })
             except Exception:
                 pass
@@ -241,6 +243,7 @@ def main():
                     temps=temps, mittelwert=mittelwert,
                     sollwert=_sollwert if (mittelwert is not None or _hand_modus) else None,
                     ausgabe=ausgabe, ventil_position=position, status=status,
+                    hand_modus=_hand_modus,
                 )
                 _log_last = time.monotonic()
 
