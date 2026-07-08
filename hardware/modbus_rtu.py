@@ -30,35 +30,26 @@ BUS_PAUSE_SEK = 0.05   # Mindestpause zwischen zwei Bustelegrammen
 def erstelle_rs485_bus(port: str, baudrate: int = 38400,
                        parity: str = "E", stopbits: int = 1,
                        timeout: float = 0.2) -> serial.Serial:
-    """Öffnet den RS-485-Bus einmalig und gibt das konfigurierte Serial-Objekt zurück.
+    """Öffnet den RS-485-Bus einmalig – exakt wie test_ventil_raw.py.
 
-    Alle Modbus-Geräte am selben Bus teilen sich dieses Objekt (shared serial).
-    Die RTS-Richtungssteuerung wird über RS485Settings aktiviert.
-
-    Args:
-        port:     Serieller Port, z.B. "/dev/ttySC1" oder "COM3"
-        baudrate: Übertragungsrate (Belimo-Standard: 38400)
-        parity:   "E" für Even – Belimo-Standard (8E1)
-        stopbits: 1  – Belimo-Standard bei Even-Parität
-        timeout:  Antwort-Timeout in Sekunden
+    Port wird über minimalmodbus.Instrument geöffnet, dessen .serial
+    anschließend von allen Geräten gemeinsam genutzt wird.
     """
-    ser = serial.Serial(
-        port=port,
-        baudrate=baudrate,
-        bytesize=8,
-        parity=_PARITAET_MAP[parity],
-        stopbits=stopbits,
-        timeout=timeout,
-    )
-    # RTS-basierte Senderichtungssteuerung für den RS-485-Transceiver
-    ser.rs485_mode = RS485Settings(
+    base = minimalmodbus.Instrument(port, slaveaddress=1)
+    base.serial.baudrate = baudrate
+    base.serial.bytesize = 8
+    base.serial.parity   = _PARITAET_MAP[parity]
+    base.serial.stopbits = stopbits
+    base.serial.timeout  = timeout
+    base.mode            = minimalmodbus.MODE_RTU
+    base.serial.rs485_mode = RS485Settings(
         rts_level_for_tx=True,
         rts_level_for_rx=False,
         delay_before_tx=0.0,
         delay_before_rx=0.0,
     )
     logger.info("RS-485-Bus geöffnet: %s (%d Bd, 8%s%d)", port, baudrate, parity, stopbits)
-    return ser
+    return base.serial
 
 
 class ModbusRTUGeraet:
@@ -95,9 +86,7 @@ class ModbusRTUGeraet:
         self.instrument.clear_buffers_before_each_transaction = True
 
         if shared_serial is not None:
-            # Temporäre Eigenverbindung von minimalmodbus sofort schließen,
-            # damit kein konkurrierender Handle auf dem Port verbleibt.
-            self.instrument.serial.close()
+            # Exakt wie test_ventil_raw.py: direkt zuweisen, kein close()
             self.instrument.serial = shared_serial
             self.instrument.close_port_after_each_call = False
         else:
