@@ -95,7 +95,9 @@ class ModbusRTUGeraet:
         self.instrument.clear_buffers_before_each_transaction = True
 
         if shared_serial is not None:
-            # Gemeinsamen Bus nutzen – Port bleibt dauerhaft offen
+            # Temporäre Eigenverbindung von minimalmodbus sofort schließen,
+            # damit kein konkurrierender Handle auf dem Port verbleibt.
+            self.instrument.serial.close()
             self.instrument.serial = shared_serial
             self.instrument.close_port_after_each_call = False
         else:
