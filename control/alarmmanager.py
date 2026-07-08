@@ -24,6 +24,15 @@ def _init_db():
             )
         """)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_alarme_bestaetigt ON alarme(bestaetigt)")
+        # Migration: quittiert-Spalten nachtraeglich hinzufuegen
+        try:
+            conn.execute("ALTER TABLE alarme ADD COLUMN quittiert INTEGER DEFAULT 0")
+        except Exception:
+            pass
+        try:
+            conn.execute("ALTER TABLE alarme ADD COLUMN quittiert_um TEXT")
+        except Exception:
+            pass
 
 class AlarmManager:
     def __init__(self):
@@ -98,17 +107,19 @@ class AlarmManager:
             return []
 
     def bestaetige(self, alarm_id):
+        """Quittiert einen Alarm – er bleibt aktiv sichtbar bis das System ihn schliesst."""
         try:
             with sqlite3.connect(DB_PFAD) as conn:
                 conn.execute(
-                    "UPDATE alarme SET bestaetigt=1, bestaetigt_um=? WHERE id=? AND bestaetigt=0",
+                    "UPDATE alarme SET quittiert=1, quittiert_um=? WHERE id=? AND bestaetigt=0",
                     (datetime.now().isoformat(timespec="seconds"), alarm_id))
         except Exception as exc:
-            logger.error("Alarm bestätigen fehlgeschlagen: %s", exc)
+            logger.error("Alarm quittieren fehlgeschlagen: %s", exc)
 
     def aktive_anzahl(self):
+        """Zaehlt offene (nicht quittierte) Alarme fuer den Badge."""
         try:
             with sqlite3.connect(DB_PFAD) as conn:
-                return conn.execute("SELECT COUNT(*) FROM alarme WHERE bestaetigt=0").fetchone()[0]
+                return conn.execute("SELECT COUNT(*) FROM alarme WHERE bestaetigt=0 AND quittiert=0").fetchone()[0]
         except Exception:
             return 0

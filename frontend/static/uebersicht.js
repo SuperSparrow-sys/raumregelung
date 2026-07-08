@@ -89,7 +89,7 @@ function updateData() {
     var kiEl = document.getElementById('kiInput');
     var kdEl = document.getElementById('kdInput');
     var sollEl = document.getElementById('sollInput');
-    if (kpEl  && document.activeElement !== kpEl)  kpEl.value  = d.Kp;
+    if (kpEl  && document.activeElement !== kpEl)  kpEl.value  = d.Kp != null ? Number(d.Kp).toFixed(2) : '';
     if (kiEl  && document.activeElement !== kiEl)  kiEl.value  = d.Ki;
     if (kdEl  && document.activeElement !== kdEl)  kdEl.value  = d.Kd;
     if (sollEl && document.activeElement !== sollEl) sollEl.value = d.sollwert;

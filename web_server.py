@@ -29,6 +29,10 @@ def _init_logging():
 
 _init_logging()
 
+# Gemeinsamer AlarmManager fuer alle Alarm-API-Endpunkte (DB-basiert, thread-sicher)
+from control.alarmmanager import AlarmManager as _AlarmManagerKlasse
+_am = _AlarmManagerKlasse()
+
 
 def setze_live_daten(daten: dict) -> None:
     """Wird von main.py jeden Regelzyklus aufgerufen (thread-safe: dict-Zuweisung ist atomar in CPython)."""
@@ -72,7 +76,7 @@ def _db_zeitraum(kanal: str, von: str = "", bis: str = "") -> list[dict]:
                 params.append(bis)
             sql += " ORDER BY id ASC"
             rows = conn.execute(sql, params).fetchall()
-            return [{"t": r[0], "v": round(r[1], 4)} for r in rows if r[1] is not None]
+            return [{"t": r[0], "v": round(r[1], 2)} for r in rows if r[1] is not None]
     except Exception:
         return []
 
@@ -82,7 +86,7 @@ def _parse(val) -> float | None:
         return None
     try:
         v = float(val)
-        return None if (v != v) else round(v, 4)
+        return None if (v != v) else round(v, 2)
     except (ValueError, TypeError):
         return None
 
@@ -99,7 +103,7 @@ def _lade_einstellungen() -> dict:
 def _alarm_anzahl() -> int:
     try:
         with sqlite3.connect(DB_PFAD) as conn:
-            row = conn.execute("SELECT COUNT(*) FROM alarme WHERE bestaetigt=0").fetchone()
+            row = conn.execute("SELECT COUNT(*) FROM alarme WHERE bestaetigt=0 AND quittiert=0").fetchone()
             return row[0] if row else 0
     except Exception:
         return 0
@@ -173,7 +177,7 @@ def api_daten():
         "hand_modus": letzte.get("hand_modus", einst.get("hand_modus", False)),
         "hand_stellwert": letzte.get("hand_stellwert", einst.get("hand_stellwert", 0.0)),
         "alarm_count": alarm_count,
-        "db_vorhanden": letzte is not None,
+        "db_vorhanden": os.path.exists(DB_PFAD),
     }
     return jsonify(antwort)
 
@@ -236,10 +240,8 @@ def api_kanaele():
 def api_alarme_get():
     try:
         nur_aktive = request.args.get("aktiv", "0") == "1"
-        from control.alarmmanager import AlarmManager
-        am = AlarmManager()
-        alarms = am.hole_alarme(nur_aktive=nur_aktive)
-        return jsonify({"alarme": alarms, "anzahl_aktiv": am.aktive_anzahl()})
+        alarms = _am.hole_alarme(nur_aktive=nur_aktive)
+        return jsonify({"alarme": alarms, "anzahl_aktiv": _am.aktive_anzahl()})
     except Exception as exc:
         log.error("alarme get: %s", exc)
         return jsonify({"alarme": [], "anzahl_aktiv": 0, "error": str(exc)}), 200
@@ -252,10 +254,8 @@ def api_alarme_quittieren():
         alarm_id = body.get("id")
         if alarm_id is None:
             return jsonify({"success": False, "error": "Keine ID angegeben"}), 200
-        from control.alarmmanager import AlarmManager
-        am = AlarmManager()
-        am.bestaetige(int(alarm_id))
-        return jsonify({"success": True, "anzahl_aktiv": am.aktive_anzahl()})
+        _am.bestaetige(int(alarm_id))
+        return jsonify({"success": True, "anzahl_aktiv": _am.aktive_anzahl()})
     except Exception as exc:
         log.error("alarme quittieren: %s", exc)
         return jsonify({"success": False, "error": str(exc)}), 200

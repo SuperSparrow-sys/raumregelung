@@ -1,1 +1,4 @@
-# Grenzwerte wurden in alarmmanager.py als Konstanten GRENZ_MIN / GRENZ_MAX / HYSTERESE definiert.
+"""
+Alarmkonfiguration fuer die Raumregelung.
+Hier koennen zukuenftig Schwellwerte, E-Mail-Empfaenger etc. eingetragen werden.
+"""

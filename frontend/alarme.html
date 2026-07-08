@@ -25,6 +25,7 @@ html, body { height:100%; overflow:auto; }
 .typ-Info { background:#eff6ff; color:var(--blue); }
 .status-badge { display:inline-block; padding:2px 10px; border-radius:12px; font-size:0.7rem; font-weight:700; }
 .status-offen { background:#fef2f2; color:var(--red); }
+.status-quittiert { background:#fef9c3; color:#92400e; }
 .status-bestaetigt { background:#f0fdf4; color:var(--green); }
 .btn-quitt { padding:4px 12px; border-radius:6px; border:1px solid var(--border-color); background:var(--primary-bg); color:var(--primary-text); font-size:0.72rem; cursor:pointer; font-family:inherit; transition:all 0.15s; }
 .btn-quitt:hover { border-color:var(--accent); background:var(--accent); color:#fff; }
@@ -95,11 +96,18 @@ function laden() {
     var html='';
     alarmeCache.forEach(function(a){
       var typKl='typ-'+a.typ;
-      var statusKl=a.bestaetigt?'status-bestaetigt':'status-offen';
-      var statusTxt=a.bestaetigt?'Bestätigt':'Offen';
+      var statusKl, statusTxt;
+      if (a.bestaetigt) {
+        statusKl='status-bestaetigt'; statusTxt='Geschlossen';
+      } else if (a.quittiert) {
+        statusKl='status-quittiert'; statusTxt='Quittiert';
+      } else {
+        statusKl='status-offen'; statusTxt='Offen';
+      }
       var btn='';
-      if (!a.bestaetigt && filterAktiv==='aktiv') btn='<button class="btn-quitt" onclick="quittieren('+a.id+')">Quittieren</button>';
-      html+='<tr>'+
+      if (!a.bestaetigt && !a.quittiert && filterAktiv==='aktiv') btn='<button class="btn-quitt" onclick="quittieren('+a.id+')">Quittieren</button>';
+      var rowStil=(!a.bestaetigt && a.quittiert)?'opacity:0.5;':'';
+      html+='<tr style="'+rowStil+'">'+ 
         '<td style="white-space:nowrap;font-size:0.78rem;">'+escapeHtml(a.zeitstempel)+'</td>'+
         '<td><span class="typ-badge '+typKl+'">'+escapeHtml(a.typ)+'</span></td>'+
         '<td>'+escapeHtml(a.text)+'</td>'+

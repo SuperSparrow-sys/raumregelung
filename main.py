@@ -1,12 +1,33 @@
 import logging
+import os
 import time
 import threading
+from logging.handlers import TimedRotatingFileHandler
 from statistics import mean
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-)
+
+def _logging_einrichten():
+    """Richtet Console- und taeglich rotierendes Datei-Logging ein (90 Tage)."""
+    log_verz = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
+    os.makedirs(log_verz, exist_ok=True)
+    fmt = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+
+    sh = logging.StreamHandler()
+    sh.setFormatter(fmt)
+
+    fh = TimedRotatingFileHandler(
+        os.path.join(log_verz, "raumregelung.log"),
+        when="midnight", interval=1, backupCount=90, encoding="utf-8",
+    )
+    fh.setFormatter(fmt)
+
+    root = logging.getLogger()
+    root.setLevel(logging.INFO)
+    root.addHandler(sh)
+    root.addHandler(fh)
+
+
+_logging_einrichten()
 logger = logging.getLogger("main")
 
 
@@ -123,13 +144,14 @@ def main():
     pid = PIDRegler(Kp=Kp, Ki=Ki, Kd=Kd, kuehl_betrieb=True)  # Kälteventil: Ist > Soll → Ventil auf
     logger_datei = DatenLogger()
 
-    logger.info("Regelung gestartet. Sollwert=%.1f°C, Kp=%.1f Ki=%.1f Kd=%.1f, Zyklus=%.0fs",
+    logger.info("Regelung gestartet. Sollwert=%.1f°C, Kp=%.2f Ki=%.1f Kd=%.1f, Zyklus=%.0fs",
                 sollwert, Kp, Ki, Kd, config.ZYKLUSZEIT_SEK)
 
     _einstellungen_last = 0.0
     _sollwert = sollwert
     _hand_modus = rst.get("hand_modus", False)
     _hand_stellwert = rst.get("hand_stellwert", 0.0)
+    _hand_modus_prev = _hand_modus
     sensor_namen = ["Sensor 1", "Sensor 2", "Sensor 3", "Sensor 4"]
     _sensor_anzahl_last = len(sensor_namen)
     _log_last = 0.0
@@ -142,8 +164,15 @@ def main():
 
             # Betriebsart jeden Zyklus lesen (sofortige Reaktion auf Umschalten)
             rst_akt = runtime_settings.laden()
+            _hand_modus_prev = _hand_modus
             _hand_modus = rst_akt.get("hand_modus", False)
             _hand_stellwert = rst_akt.get("hand_stellwert", 0.0)
+
+            # Betriebsart-Uebergang erkennen
+            if not _hand_modus_prev and _hand_modus:
+                logger.info("Handbetrieb aktiviert – Stellwert=%.0f%%", _hand_stellwert)
+            elif _hand_modus_prev and not _hand_modus:
+                logger.info("Automatikbetrieb – bumpless transfer (PID lief durch)")
 
             jetzt = time.monotonic()
             if jetzt - _einstellungen_last >= 60:
@@ -163,12 +192,22 @@ def main():
             mittelwert, sensor_anzahl = gueltiger_mittelwert(temps)
 
             ausgabe = None
+            pid_ausgabe = None
             position = None
 
+            # Im Handbetrieb laeuft der PID weiter:
+            # ausgabe  = Hand-Stellwert (geht ans Ventil)
+            # pid_ausgabe = PID-Berechnung (Anzeige + bumpless transfer)
             if _hand_modus:
-                # Hand-Betrieb: PID überbrückt, direkte Stellwertvorgabe
                 ausgabe = max(0.0, min(100.0, _hand_stellwert))
                 status = "HAND"
+                if mittelwert is not None:
+                    pid_ausgabe = pid.berechne(
+                        sollwert=_sollwert,
+                        messwert=mittelwert,
+                        dt=time.monotonic() - _pid_letzte_zeit,
+                    )
+                _pid_letzte_zeit = time.monotonic()
             elif mittelwert is not None:
                 if sensor_anzahl != _sensor_anzahl_last:
                     if sensor_anzahl < len(sensor_namen):
@@ -184,11 +223,13 @@ def main():
                     messwert=mittelwert,
                     dt=time.monotonic() - _pid_letzte_zeit,
                 )
+                pid_ausgabe = ausgabe
                 _pid_letzte_zeit = time.monotonic()
             else:
                 if _sensor_anzahl_last != 0:
                     logger.warning("Keine Temperaturdaten – Regelung pausiert")
                     _sensor_anzahl_last = 0
+                _pid_letzte_zeit = time.monotonic()
                 status = "KEINE_DATEN"
 
             if ausgabe is not None:
@@ -220,7 +261,7 @@ def main():
                     "temp_sensor_3": temps[2] if len(temps) > 2 else None,
                     "temp_sensor_4": temps[3] if len(temps) > 3 else None,
                     "temp_mittelwert": mittelwert,
-                    "pid_ausgabe_prozent": ausgabe,
+                    "pid_ausgabe_prozent": pid_ausgabe,
                     "ventil_position_prozent": position,
                     "status": status,
                     "hand_modus": _hand_modus,
@@ -238,11 +279,11 @@ def main():
                 status,
             )
 
-            if time.monotonic() - _log_last >= 60.0:
+            if time.monotonic() - _log_last >= config.DB_LOG_INTERVALL_SEK:
                 logger_datei.schreibe_zeile(
                     temps=temps, mittelwert=mittelwert,
                     sollwert=_sollwert if (mittelwert is not None or _hand_modus) else None,
-                    ausgabe=ausgabe, ventil_position=position, status=status,
+                    ausgabe=pid_ausgabe, ventil_position=position, status=status,
                     hand_modus=_hand_modus,
                 )
                 _log_last = time.monotonic()

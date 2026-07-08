@@ -58,7 +58,7 @@ body.no-scroll { overflow:hidden; }
     background:var(--primary-bg);
     border:2px solid var(--border-color);
     border-radius:20px;
-    width:100%; max-width:1100px;
+    width:100%; max-width:1400px;
     aspect-ratio:16/9;
     max-height:calc(100vh - 100px);
     box-shadow:var(--shadow-lg);
@@ -169,7 +169,7 @@ body.no-scroll { overflow:hidden; }
 .ventil-row { display:flex; gap:14px; align-items:center; }
 .ventil-item { text-align:center; }
 .ventil-item .venti-sub { font-size:0.55rem; color:var(--secondary-text); font-weight:600; text-transform:uppercase; }
-.ventil-item .ventil-val { font-size:1.2rem; font-weight:800; color:var(--primary-text); }
+.ventil-item .ventil-val { font-size:1.2rem; font-weight:800; color:var(--primary-text); white-space:nowrap; }
 .ventil-item .ventil-unit { font-size:0.65rem; color:var(--secondary-text); }
 
 /* Fußzeile */
@@ -178,7 +178,9 @@ body.no-scroll { overflow:hidden; }
     display:flex; gap:20px; font-size:0.75rem; color:var(--secondary-text);
     background:var(--primary-bg); padding:4px 16px; border-radius:10px;
     border:1px solid var(--border-color);
+    white-space:nowrap;
 }
+.visu-footer strong { white-space:nowrap; }
 
 /* Alarm Badge */
 #alarmBadge {
@@ -281,7 +283,7 @@ body.no-scroll { overflow:hidden; }
     .visu-container { padding:8px 12px; }
     .modal { width:95vw; }
     .pid-grid { grid-template-columns:1fr; }
-    .visu-rechteck { aspect-ratio:auto; min-height:500px; padding:16px; }
+    .visu-rechteck { aspect-ratio:auto; min-height:500px; max-width:100%; padding:16px; }
     .sensor-box { min-width:80px; padding:6px 10px; }
     .sensor-box .sensor-wert { font-size:1.2rem; }
     .ventil-box { width:100px; height:80px; }

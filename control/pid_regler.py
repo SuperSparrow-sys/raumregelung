@@ -1,12 +1,11 @@
 """
 PID-Regler mit Anti-Windup.
 
-Eingabe der Zeitanteile in **Minuten**:
+Eingabe der Zeitanteile in **Sekunden**:
   Kp  – Proportionalverstaerkung (dimensionslos)
-  Ki  – Nachstellzeit I-Anteil in Minuten  (0 = kein I-Anteil)
-  Kd  – Vorhaltezeit  D-Anteil in Minuten  (0 = kein D-Anteil)
+  Ki  – Nachstellzeit I-Anteil in Sekunden  (0 = kein I-Anteil)
+  Kd  – Vorhaltezeit  D-Anteil in Sekunden  (0 = kein D-Anteil)
 
-Intern wird in Sekunden gerechnet.
 Anti-Windup: Integral wird so begrenzt, dass der I-Anteil allein
 maximal ±AUSGABE_MAX erreichen kann.
 """
@@ -16,7 +15,7 @@ AUSGABE_MIN = 0.0     # Stellgroesse-Untergrenze (%)
 
 
 class PIDRegler:
-    """PID-Regler – Eingabe Ki/Kd in Minuten, Anti-Windup.
+    """PID-Regler – Eingabe Ki/Kd in Sekunden, Anti-Windup.
 
     kuehl_betrieb=True:  Fehler = Ist − Soll  (Ventil öffnet wenn zu warm)
     kuehl_betrieb=False: Fehler = Soll − Ist  (Ventil öffnet wenn zu kalt)
@@ -26,13 +25,13 @@ class PIDRegler:
         """
         Args:
             Kp:            Proportionalverstaerkung
-            Ki:            I-Anteil in Minuten (0 = aus)
-            Kd:            D-Anteil in Minuten (0 = aus)
+            Ki:            I-Anteil in Sekunden (0 = aus)
+            Kd:            D-Anteil in Sekunden (0 = aus)
             kuehl_betrieb: True für Kälteventil (Ist > Soll → mehr Kühlen)
         """
         self.Kp = Kp
-        self.Ki = Ki   # Minuten
-        self.Kd = Kd   # Minuten
+        self.Ki = Ki   # Sekunden
+        self.Kd = Kd   # Sekunden
         self.kuehl_betrieb = kuehl_betrieb
 
         # Interne Zustandsvariablen
@@ -40,18 +39,18 @@ class PIDRegler:
         self.letzter_fehler = 0.0
         self.letzte_zeit = None
 
-    # ----- interne Umrechnung Minuten → Sekunden -----
+    # ----- Ki/Kd werden direkt in Sekunden verwendet -----
     @property
     def _ki_sek(self) -> float:
-        """Ki in 1/s: Kp / (Ki_min * 60).  0 wenn Ki == 0."""
+        """Ki in 1/s: Kp / Ki_sek.  0 wenn Ki == 0."""
         if self.Ki <= 0:
             return 0.0
-        return self.Kp / (self.Ki * 60.0)
+        return self.Kp / self.Ki
 
     @property
     def _kd_sek(self) -> float:
-        """Kd in s: Kp * Kd_min * 60."""
-        return self.Kp * self.Kd * 60.0
+        """Kd in s: Kp * Kd_sek."""
+        return self.Kp * self.Kd
 
     def berechne(self, sollwert: float, messwert: float, dt: float = 1.0) -> float:
         """
@@ -63,7 +62,7 @@ class PIDRegler:
             dt: Zeitschritt in Sekunden (Standard: 1.0)
 
         Returns:
-            Stellgroesse (nicht geclippt – Clipping macht der Aufrufer)
+            Stellgroesse (immer auf [0, 100] begrenzt)
         """
         fehler = (messwert - sollwert) if self.kuehl_betrieb else (sollwert - messwert)
 
@@ -109,7 +108,7 @@ class PIDRegler:
         self.letzte_zeit = None
 
     def setze_parameter(self, Kp: float = None, Ki: float = None, Kd: float = None):
-        """Aktualisiert PID-Parameter (Ki/Kd in Minuten)."""
+        """Aktualisiert PID-Parameter (Ki/Kd in Sekunden)."""
         if Kp is not None:
             self.Kp = Kp
         if Ki is not None:

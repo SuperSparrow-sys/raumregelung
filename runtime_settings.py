@@ -10,9 +10,9 @@ _LOCK = threading.Lock()
 _DEFAULTS = {
     "sollwert": 22.0,
     "Kp": 40.0,
-    "Ki": 10.0,
+    "Ki": 600.0,    # 10 Minuten in Sekunden
     "Kd": 0.0,
-    "zykluszeit_sek": 60.0,
+    "zykluszeit_sek": 3.0,
     "hand_modus": False,
     "hand_stellwert": 0.0,
 }
@@ -20,9 +20,9 @@ _DEFAULTS = {
 GRENZEN = {
     "sollwert":        (5.0, 40.0),
     "Kp":              (0.0, 100.0),
-    "Ki":              (0.0, 60.0),
+    "Ki":              (0.0, 3600.0),
     "Kd":              (0.0, 60.0),
-    "zykluszeit_sek":  (10.0, 600.0),
+    "zykluszeit_sek":  (1.0, 60.0),
     "hand_stellwert":  (0.0, 100.0),
 }
 
@@ -74,6 +74,6 @@ def validiere_und_speichere(updates: dict):
                 return False, f"'{key}' ist keine gültige Zahl: {wert!r}", {}
             if not (lo <= v <= hi):
                 return False, f"'{key}' muss zwischen {lo} und {hi} liegen (erhalten: {v})", {}
-            updates[key] = round(v, 4)
+            updates[key] = round(v, 2)
     speichern(updates)
     return True, "", laden()

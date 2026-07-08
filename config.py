@@ -26,13 +26,14 @@ VENTIL_ADRESSE = 5
 # ---- Sollwert Raumtemperatur [°C] ----
 SOLLWERT_TEMPERATUR = 22.0
 
-# ---- PID-Parameter (Kp dimensionslos, Ki/Kd in Minuten) ----
+# ---- PID-Parameter (Kp dimensionslos, Ki/Kd in Sekunden) ----
 PID_KP = 40.0
-PID_KI = 10.0
+PID_KI = 600.0   # 10 Minuten
 PID_KD = 0.0
 
 # ---- Regelzyklus / Speicherintervall [Sekunden] ----
-ZYKLUSZEIT_SEK = 3.0
+ZYKLUSZEIT_SEK = 3.0          # PID-Berechnung und Ventilschreiben (20x pro Minute)
+DB_LOG_INTERVALL_SEK = 60.0   # Speicherung in die Datenbank
 
 # ---- CSV-Logdatei ----
 LOG_DATEI = "regelung_log.csv"
