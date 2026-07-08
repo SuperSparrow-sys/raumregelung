@@ -4,7 +4,7 @@ import threading
 from statistics import mean
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
 logger = logging.getLogger("main")
@@ -25,24 +25,27 @@ def _versuche_hardware():
         from hardware.temperatur_sensor import TemperaturSensor
         from hardware.ventil import KaelteVentil
 
-        # Einmalig den gemeinsamen RS-485-Bus öffnen (8E1, RTS-Richtungssteuerung)
+        logger.info("[INIT] Öffne RS-485-Bus %s …", cfg.SERIELLER_PORT)
         bus = erstelle_rs485_bus(
             port=cfg.SERIELLER_PORT,
             baudrate=cfg.BAUDRATE,
             parity=cfg.PARITAET,
             stopbits=cfg.STOPBITS,
         )
+        logger.info("[INIT] Bus geöffnet. Erstelle Sensor-Instanzen …")
 
-        sensoren = [
-            TemperaturSensor(
+        sensoren = []
+        for i, adr in enumerate(cfg.TEMPERATUR_SENSOR_ADRESSEN):
+            logger.info("[INIT] Sensor %d (Adr %d) …", i + 1, adr)
+            sensoren.append(TemperaturSensor(
                 port=cfg.SERIELLER_PORT, adresse=adr,
                 baudrate=cfg.BAUDRATE, parity=cfg.PARITAET,
                 stopbits=cfg.STOPBITS,
                 name=f"Temp-Sensor {i+1} (Adr {adr})",
                 shared_serial=bus,
-            )
-            for i, adr in enumerate(cfg.TEMPERATUR_SENSOR_ADRESSEN)
-        ]
+            ))
+
+        logger.info("[INIT] Erstelle Ventil (Adr %d) …", cfg.VENTIL_ADRESSE)
         ventil = KaelteVentil(
             port=cfg.SERIELLER_PORT, adresse=cfg.VENTIL_ADRESSE,
             baudrate=cfg.BAUDRATE, parity=cfg.PARITAET,
@@ -62,14 +65,17 @@ def lese_temperaturen(sensoren, alarmmgr, namen):
     from hardware.modbus_rtu import BUS_PAUSE_SEK
     werte = []
     for i, sensor in enumerate(sensoren):
+        logger.debug("[LESE] %s …", sensor.name)
         try:
             t = sensor.lese_temperatur()
+            logger.debug("[LESE] %s = %.1f °C", sensor.name, t)
             werte.append(t)
             alarmmgr.verbindung_wiederhergestellt(namen[i])
         except Exception:
+            logger.debug("[LESE] %s – kein Wert", sensor.name)
             werte.append(float("nan"))
             alarmmgr.verbindungs_abbruch(namen[i])
-        time.sleep(BUS_PAUSE_SEK)   # Bustelegramme trennen
+        time.sleep(BUS_PAUSE_SEK)
     return werte
 
 

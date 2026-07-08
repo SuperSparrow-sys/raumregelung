@@ -80,23 +80,25 @@ class ModbusRTUGeraet:
         self.name = name or f"Geraet@{adresse}"
         self.adresse = adresse
 
-        self.instrument = minimalmodbus.Instrument(
-            port, adresse, mode=minimalmodbus.MODE_RTU
-        )
-        self.instrument.clear_buffers_before_each_transaction = True
+        # Exakt wie Referenzskript: Instrument ohne mode-Parameter erstellen
+        self.instrument = minimalmodbus.Instrument(port, slaveaddress=adresse)
 
         if shared_serial is not None:
-            # Exakt wie test_ventil_raw.py: direkt zuweisen, kein close()
+            # Serial direkt ersetzen – exakt wie Referenzskript
             self.instrument.serial = shared_serial
-            self.instrument.close_port_after_each_call = False
         else:
-            # Fallback: eigene Verbindung (Port wird je Transaktion geöffnet/geschlossen)
+            # Fallback ohne shared_serial
             self.instrument.serial.baudrate = baudrate
             self.instrument.serial.bytesize = bytesize
-            self.instrument.serial.parity = _PARITAET_MAP[parity]
+            self.instrument.serial.parity   = _PARITAET_MAP[parity]
             self.instrument.serial.stopbits = stopbits
-            self.instrument.serial.timeout = timeout
-            self.instrument.close_port_after_each_call = True
+            self.instrument.serial.timeout  = timeout
+            self.instrument.serial.rs485_mode = RS485Settings(
+                rts_level_for_tx=True,
+                rts_level_for_rx=False,
+                delay_before_tx=0.0,
+                delay_before_rx=0.0,
+            )
 
     def lese_register(self, register: int, anzahl_dezimalstellen: int = 0,
                        signed: bool = False, versuche: int = 3):
@@ -108,15 +110,16 @@ class ModbusRTUGeraet:
         letzter_fehler = None
         for versuch in range(1, versuche + 1):
             try:
-                return self.instrument.read_register(
+                logger.debug("%s: lese Reg %d (Versuch %d) …", self.name, register, versuch)
+                wert = self.instrument.read_register(
                     register,
                     number_of_decimals=anzahl_dezimalstellen,
                     functioncode=3,
                     signed=signed,
                 )
-            except (minimalmodbus.NoResponseError,
-                    minimalmodbus.InvalidResponseError,
-                    serial.SerialException) as exc:
+                logger.debug("%s: Reg %d = %s", self.name, register, wert)
+                return wert
+            except Exception as exc:
                 letzter_fehler = exc
                 logger.warning("%s: Lesefehler Register %d (Versuch %d/%d): %s",
                                 self.name, register, versuch, versuche, exc)
@@ -139,9 +142,7 @@ class ModbusRTUGeraet:
                     signed=signed,
                 )
                 return
-            except (minimalmodbus.NoResponseError,
-                    minimalmodbus.InvalidResponseError,
-                    serial.SerialException) as exc:
+            except Exception as exc:
                 letzter_fehler = exc
                 logger.warning("%s: Schreibfehler Register %d (Versuch %d/%d): %s",
                                 self.name, register, versuch, versuche, exc)
