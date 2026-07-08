@@ -134,6 +134,8 @@ class ModbusRTUGeraet:
         letzter_fehler = None
         for versuch in range(1, versuche + 1):
             try:
+                logger.debug("%s: schreibe Reg %d = %s (Versuch %d) …",
+                             self.name, register, wert, versuch)
                 self.instrument.write_register(
                     register,
                     wert,
@@ -141,6 +143,7 @@ class ModbusRTUGeraet:
                     functioncode=6,
                     signed=signed,
                 )
+                logger.debug("%s: Reg %d geschrieben", self.name, register)
                 return
             except Exception as exc:
                 letzter_fehler = exc

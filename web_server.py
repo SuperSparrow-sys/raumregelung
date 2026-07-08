@@ -18,6 +18,9 @@ DB_PFAD = str(BASE / "gesamtdaten.db")
 app = Flask(__name__, static_folder=str(FRONTEND_DIR / "static"), static_url_path="/static")
 log = logging.getLogger("web")
 
+# Live-Daten: werden von main.py jeden Regelzyklus aktualisiert
+_live: dict = {}
+
 
 def _init_logging():
     if not logging.getLogger().handlers:
@@ -25,6 +28,12 @@ def _init_logging():
 
 
 _init_logging()
+
+
+def setze_live_daten(daten: dict) -> None:
+    """Wird von main.py jeden Regelzyklus aufgerufen (thread-safe: dict-Zuweisung ist atomar in CPython)."""
+    global _live
+    _live = daten
 
 
 def _db_letzte_zeile() -> dict | None:
@@ -135,10 +144,8 @@ def alarme():
 
 @app.route("/api/daten")
 def api_daten():
-    try:
-        letzte = _db_letzte_zeile() or {}
-    except Exception:
-        letzte = {}
+    # Live-Daten bevorzugen (alle 3 s aktualisiert), DB nur als Fallback
+    letzte = _live if _live else (_db_letzte_zeile() or {})
     try:
         einst = _lade_einstellungen()
     except Exception:

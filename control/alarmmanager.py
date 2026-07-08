@@ -29,6 +29,17 @@ class AlarmManager:
     def __init__(self):
         _init_db()
         self._zustand = {}
+        # Zustand aus DB wiederherstellen – verhindert Duplikate nach Neustart
+        try:
+            with sqlite3.connect(DB_PFAD) as conn:
+                rows = conn.execute(
+                    "SELECT sensor FROM alarme WHERE bestaetigt=0"
+                ).fetchall()
+                for row in rows:
+                    if row[0]:
+                        self._zustand[row[0]] = "abbruch"
+        except Exception:
+            pass
 
     def verbindungs_abbruch(self, sensor_name):
         if self._zustand.get(sensor_name) == "abbruch":

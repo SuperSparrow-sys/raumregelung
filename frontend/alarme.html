@@ -76,8 +76,8 @@ function escapeHtml(t) {
   var d=document.createElement('div'); d.appendChild(document.createTextNode(t||'')); return d.innerHTML;
 }
 function laden() {
-  var url='/api/alarme?aktiv='+(filterAktiv==='aktiv'?'1':'0');
-  if (filterAktiv==='Fehler'||filterAktiv==='Warnung') url='/api/alarme?aktiv=0';
+  var nurAktiv = (filterAktiv === 'aktiv' || filterAktiv === 'Fehler' || filterAktiv === 'Warnung') ? '1' : '0';
+  var url = '/api/alarme?aktiv=' + nurAktiv;
   fetch(url).then(function(r){return r.json();}).then(function(res){
     alarmeCache=res.alarme||[];
     var tbody=document.getElementById('alarmBody');

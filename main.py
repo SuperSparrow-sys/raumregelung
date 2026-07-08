@@ -133,6 +133,7 @@ def main():
     sensor_namen = ["Sensor 1", "Sensor 2", "Sensor 3", "Sensor 4"]
     _sensor_anzahl_last = len(sensor_namen)
     _log_last = 0.0
+    _pid_letzte_zeit = time.monotonic()
 
     try:
         while True:
@@ -181,8 +182,9 @@ def main():
                 ausgabe = pid.berechne(
                     sollwert=_sollwert,
                     messwert=mittelwert,
-                    dt=config.ZYKLUSZEIT_SEK,
+                    dt=time.monotonic() - _pid_letzte_zeit,
                 )
+                _pid_letzte_zeit = time.monotonic()
             else:
                 if _sensor_anzahl_last != 0:
                     logger.warning("Keine Temperaturdaten – Regelung pausiert")
@@ -208,6 +210,32 @@ def main():
                 if position is None:
                     position = float("nan")
 
+            # Live-Daten sofort für das Dashboard bereitstellen (alle 3 s)
+            try:
+                import web_server as _ws
+                _ws.setze_live_daten({
+                    "zeitstempel": __import__('datetime').datetime.now().isoformat(timespec="seconds"),
+                    "temp_sensor_1": temps[0] if len(temps) > 0 else None,
+                    "temp_sensor_2": temps[1] if len(temps) > 1 else None,
+                    "temp_sensor_3": temps[2] if len(temps) > 2 else None,
+                    "temp_sensor_4": temps[3] if len(temps) > 3 else None,
+                    "temp_mittelwert": mittelwert,
+                    "pid_ausgabe_prozent": ausgabe,
+                    "ventil_position_prozent": position,
+                    "status": status,
+                })
+            except Exception:
+                pass
+
+            logger.debug(
+                "[ZYKLUS] Temp=%.1f°C Soll=%.1f°C PID->%.1f%% Ventil-Ist=%.1f%% [%s]",
+                mittelwert if mittelwert is not None else float('nan'),
+                _sollwert,
+                ausgabe if ausgabe is not None else float('nan'),
+                position if (position is not None and position == position) else float('nan'),
+                status,
+            )
+
             if time.monotonic() - _log_last >= 60.0:
                 logger_datei.schreibe_zeile(
                     temps=temps, mittelwert=mittelwert,
@@ -217,7 +245,7 @@ def main():
                 _log_last = time.monotonic()
 
             wartezeit = config.ZYKLUSZEIT_SEK - (time.monotonic() - zyklus_start)
-            time.sleep(max(1.0, wartezeit))
+            time.sleep(max(0.0, wartezeit))
 
     except KeyboardInterrupt:
         logger.info("Regelung durch Benutzer beendet.")
