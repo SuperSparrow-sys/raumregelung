@@ -1,9 +1,30 @@
 import logging
+import json
 import os
 import time
 import threading
 from logging.handlers import TimedRotatingFileHandler
 from statistics import mean
+
+_PID_STATE_PFAD = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pid_state.json")
+
+
+def _pid_integral_laden() -> float:
+    """Liest den gespeicherten I-Anteil aus pid_state.json."""
+    try:
+        with open(_PID_STATE_PFAD, "r", encoding="utf-8") as f:
+            return float(json.load(f).get("integral", 0.0))
+    except Exception:
+        return 0.0
+
+
+def _pid_integral_speichern(integral: float) -> None:
+    """Schreibt den aktuellen I-Anteil in pid_state.json."""
+    try:
+        with open(_PID_STATE_PFAD, "w", encoding="utf-8") as f:
+            json.dump({"integral": integral}, f)
+    except Exception as exc:
+        logger.warning("pid_state.json nicht schreibbar: %s", exc)
 
 
 def _logging_einrichten():
@@ -142,6 +163,8 @@ def main():
     Kd = rst["Kd"]
 
     pid = PIDRegler(Kp=Kp, Ki=Ki, Kd=Kd, kuehl_betrieb=True)  # Kälteventil: Ist > Soll → Ventil auf
+    pid.integral = _pid_integral_laden()
+    logger.info("PID-Integral aus pid_state.json geladen: %.4f", pid.integral)
     logger_datei = DatenLogger()
 
     logger.info("Regelung gestartet. Sollwert=%.1f°C, Kp=%.2f Ki=%.1f Kd=%.1f, Zyklus=%.0fs",
@@ -286,6 +309,7 @@ def main():
                     ausgabe=pid_ausgabe, ventil_position=position, status=status,
                     hand_modus=_hand_modus,
                 )
+                _pid_integral_speichern(pid.integral)
                 _log_last = time.monotonic()
 
             wartezeit = config.ZYKLUSZEIT_SEK - (time.monotonic() - zyklus_start)
@@ -301,6 +325,8 @@ def main():
                 ventil.setze_stellwert(0.0)
             except Exception:
                 pass
+        _pid_integral_speichern(pid.integral)
+        logger.info("PID-Integral gespeichert: %.4f", pid.integral)
         if logger_datei is not None:
             logger_datei.schliessen()
 
