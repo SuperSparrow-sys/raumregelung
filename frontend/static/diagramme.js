@@ -23,10 +23,19 @@ function fmtDT(d) {
 
 function getZeitraum() {
   var akt = document.querySelector('.zeitraum-btn.aktiv');
-  var std = akt ? parseInt(akt.dataset.std) : 24;
-  var bis = new Date();
-  var von = new Date(bis.getTime() - std*3600000);
-  return {von:von, bis:bis};
+  if (akt) {
+    var std = parseInt(akt.dataset.std);
+    var bis = new Date();
+    var von = new Date(bis.getTime() - std*3600000);
+    return {von:von, bis:bis};
+  } else {
+    var vonVal = document.getElementById('zeitVon').value;
+    var bisVal = document.getElementById('zeitBis').value;
+    return {
+      von: vonVal ? new Date(vonVal) : new Date(Date.now() - 24*3600000),
+      bis: bisVal ? new Date(bisVal) : new Date()
+    };
+  }
 }
 
 function getAktiveKanaele() {
@@ -72,8 +81,10 @@ function laden() {
     return;
   }
   var zp = getZeitraum();
-  document.getElementById('zeitVon').value = fmtDT(zp.von).replace(' ','T');
-  document.getElementById('zeitBis').value = fmtDT(zp.bis).replace(' ','T');
+  if (document.querySelector('.zeitraum-btn.aktiv')) {
+    document.getElementById('zeitVon').value = fmtDT(zp.von).replace(' ','T');
+    document.getElementById('zeitBis').value = fmtDT(zp.bis).replace(' ','T');
+  }
   info.textContent = 'Lade Daten ('+kanaele.length+' Kanäle) …';
 
   var body = JSON.stringify({kanaele:kanaele, von:fmtDT(zp.von), bis:fmtDT(zp.bis)});
@@ -164,6 +175,12 @@ document.addEventListener('DOMContentLoaded', function(){
   });
 
   document.getElementById('btnLaden').addEventListener('click', laden);
+
+  ['zeitVon','zeitBis'].forEach(function(id){
+    document.getElementById(id).addEventListener('change', function(){
+      document.querySelectorAll('.zeitraum-btn').forEach(function(b){b.classList.remove('aktiv');});
+    });
+  });
 
   document.getElementById('btnKanalToggle').addEventListener('click', function(){
     var panel = document.getElementById('kanalPanel');

@@ -16,7 +16,18 @@ FRONTEND_DIR = BASE / "frontend"
 DB_PFAD = str(BASE / "gesamtdaten.db")
 
 app = Flask(__name__, static_folder=str(FRONTEND_DIR / "static"), static_url_path="/static")
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
 log = logging.getLogger("web")
+
+
+@app.after_request
+def kein_cache(response):
+    ct = response.content_type or ""
+    if "text/html" in ct or "javascript" in ct or "text/css" in ct:
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
 
 # Live-Daten: werden von main.py jeden Regelzyklus aktualisiert
 _live: dict = {}
@@ -24,7 +35,10 @@ _live: dict = {}
 
 def _init_logging():
     if not logging.getLogger().handlers:
-        logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+        logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+    # Werkzeug HTTP-Access-Logs (GET /api/daten etc.) auf WARNING setzen
+    # damit sie nicht das INFO-Log fluten
+    logging.getLogger("werkzeug").setLevel(logging.WARNING)
 
 
 _init_logging()
