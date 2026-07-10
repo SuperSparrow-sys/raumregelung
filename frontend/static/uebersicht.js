@@ -111,7 +111,6 @@ function loadSensorChart(key, stunden) {
   var von = new Date(jetzt.getTime() - stunden*3600000);
 
   document.getElementById('sensorModalTitel').textContent = info.name + ' – Verlauf';
-  var detailDiv = document.getElementById('sensorDetailInfo');
 
   fetch('/api/historie?kanal='+info.kanal+'&von='+fmtDT(von)+'&bis='+fmtDT(jetzt))
     .then(function(r){return r.json();}).then(function(res){
@@ -125,7 +124,6 @@ function loadSensorChart(key, stunden) {
       var werte  = daten.map(function(d){return d.v;});
 
       if (werte.length === 0) {
-        detailDiv.innerHTML = '';
         canvas.style.display = 'none';
         var noMsg = document.createElement('div');
         noMsg.className = 'no-data-msg';
@@ -135,18 +133,6 @@ function loadSensorChart(key, stunden) {
         if (sensorChart) { sensorChart.destroy(); sensorChart=null; }
         return;
       }
-
-      var min = Math.min.apply(null, werte)-1;
-      var max = Math.max.apply(null, werte)+1;
-      var avg = werte.reduce(function(a,b){return a+b;},0)/werte.length;
-      var aktuell = werte[werte.length-1];
-
-      detailDiv.innerHTML =
-        '<div><span class="label">Aktuell</span><span class="value">'+aktuell.toFixed(1)+' °C</span></div>'+
-        '<div><span class="label">Mittel</span><span class="value">'+avg.toFixed(1)+' °C</span></div>'+
-        '<div><span class="label">Min</span><span class="value">'+(min+1).toFixed(1)+' °C</span></div>'+
-        '<div><span class="label">Max</span><span class="value">'+(max-1).toFixed(1)+' °C</span></div>'+
-        '<div><span class="label">Messwerte</span><span class="value">'+werte.length+'</span></div>';
 
       if (sensorChart) { sensorChart.destroy(); }
 
@@ -185,9 +171,7 @@ function loadSensorChart(key, stunden) {
           }
         }
       });
-    }).catch(function(){
-      detailDiv.innerHTML = '<div style="text-align:center;color:var(--red);padding:20px;">Fehler beim Laden.</div>';
-    });
+    }).catch(function(){});
 }
 
 function openSensorModal(key) {

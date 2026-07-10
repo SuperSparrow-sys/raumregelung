@@ -233,16 +233,6 @@ body.no-scroll { overflow:hidden; }
 
 /* Sensor-Modal (Chart) */
 .sensor-modal-body { padding:0; }
-.sensor-detail-info {
-    display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
-    gap:8px; padding:0 20px 12px;
-}
-.sensor-detail-info > div {
-    text-align:center; padding:6px; background:var(--secondary-bg); border-radius:8px;
-    border:1px solid var(--border-color);
-}
-.sensor-detail-info .label { font-size:0.65rem; color:var(--secondary-text); display:block; }
-.sensor-detail-info .value { font-size:1.1rem; font-weight:700; display:block; }
 .chart-container { position:relative; height:350px; padding:16px; }
 
 /* Zeitraum-Buttons */
